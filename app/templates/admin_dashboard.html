@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Admin Dashboard</title>
+</head>
+
+<body>
+    <h1>Admin Dashboard</h1>
+    <p>Daily Attendance Count: {{ daily_count }}</p>
+    <!-- Add more metrics here -->
+    <a href="/">Log Out</a>
+</body>
+
+</html>

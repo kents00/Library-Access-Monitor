@@ -1,0 +1,45 @@
+{% include "base.html" %}
+{% block home %}
+<div class="home-container1">
+    <div class="home-container2">
+        <div class="home-container3">
+            <img src="{{ url_for('static', filename='images/ustp-careercenter-white-200h.png') }}" alt="image"
+                class="home-image" />
+            <div class="home-container4">
+                <h1 class="home-text1">Library Attendance System</h1>
+                <span class="home-text2">Made by Group 3 | Kent Edoloverio</span>
+            </div>
+        </div>
+        <div class="home-max-width thq-section-padding thq-section-max-width">
+            <div class="home-form-root">
+                <div class="home-form1">
+                    <form method="POST" action="/" id="loginForm" class="home-form2">
+                        <div class="home-email">
+                            <input type="text" name="id" id="id" required="true" placeholder="Input your ID here"
+                                autofocus="true" class="home-textinput thq-input thq-body-large" />
+                        </div>
+                        <div class="home-container5">
+                            <button type="submit" class="home-button thq-button-filled" id="submitBtn">
+                                <span class="thq-body-small">Log-in</span>
+                            </button>
+                        </div>
+                    </form>
+                    {% if student %}
+                    <p>Welcome, {{ student.name }}</p>
+                    <p>Course: {{ student.course }}</p>
+                    <p>ID: {{ student.id }}</p>
+                    {% endif %}
+
+                    {% with messages = get_flashed_messages() %}
+                    {% if messages %}
+                    {% for message in messages %}
+                    <p>{{ message }}</p>
+                    {% endfor %}
+                    {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

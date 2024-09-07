@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Manage Students</title>
+</head>
+
+<body>
+    <h1>Manage Students</h1>
+    <form method="POST" action="/admin/manage_students">
+        <h2>Add Student</h2>
+        <input type="text" name="id" placeholder="ID" required>
+        <input type="text" name="name" placeholder="Name" required>
+        <input type="text" name="course" placeholder="Course" required>
+        <input type="number" name="age" placeholder="Age" required>
+        <input type="text" name="place_of_residence" placeholder="Place of Residence" required>
+        <button type="submit" name="add">Add Student</button>
+    </form>
+    <h2>Current Students</h2>
+    <ul>
+        {% for student in students %}
+        <li>{{ student.name }} - <a href="{{ url_for('manage_students', id=student.id, remove='true') }}">Remove</a>
+        </li>
+        {% endfor %}
+    </ul>
+    <a href="/">Log Out</a>
+</body>
+
+</html>
