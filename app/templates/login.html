@@ -1,45 +1,69 @@
 {% include "base.html" %}
 {% block home %}
-<div class="home-container1">
-    <div class="home-container2">
-        <div class="home-container3">
-            <img src="{{ url_for('static', filename='images/ustp-careercenter-white-200h.png') }}" alt="image"
-                class="home-image" />
-            <div class="home-container4">
-                <h1 class="home-text1">Library Attendance System</h1>
-                <span class="home-text2">Made by Group 3 | Kent Edoloverio</span>
+    <div>
+      <div class="login-successfully-container1">
+        <div class="login-successfully-container2">
+          <div class="login-successfully-container3">
+            <img
+              alt="image"
+              src="{{ url_for('static', filename='images/ustp-logo.png') }}"
+              class="login-successfully-image1"
+            />
+            <div class="login-successfully-container4">
+              <h1 class="login-successfully-text1">
+                Library Access Monitor
+              </h1>
+              <span class="login-successfully-text2">
+                Made by Group 3 | Kent Edoloverio
+              </span>
             </div>
-        </div>
-        <div class="home-max-width thq-section-padding thq-section-max-width">
-            <div class="home-form-root">
-                <div class="home-form1">
-                    <form method="POST" action="/" id="loginForm" class="home-form2">
-                        <div class="home-email">
-                            <input type="text" name="id" id="id" required="true" placeholder="Input your ID here"
-                                autofocus="true" class="home-textinput thq-input thq-body-large" />
-                        </div>
-                        <div class="home-container5">
-                            <button type="submit" class="home-button thq-button-filled" id="submitBtn">
-                                <span class="thq-body-small">Log-in</span>
-                            </button>
-                        </div>
-                    </form>
-                    {% if student %}
-                    <p>Welcome, {{ student.name }}</p>
-                    <p>Course: {{ student.course }}</p>
-                    <p>ID: {{ student.id }}</p>
-                    {% endif %}
+          </div>
+          <div
+            class="login-successfully-max-width1 thq-section-padding thq-section-max-width"
+          >
+            <div class="login-successfully-form-root1">
+              <div class="login-successfully-form1">
 
-                    {% with messages = get_flashed_messages() %}
-                    {% if messages %}
-                    {% for message in messages %}
-                    <p>{{ message }}</p>
-                    {% endfor %}
-                    {% endif %}
-                    {% endwith %}
+                <form method="POST" action="/" id="loginForm" class="login-successfully-form2">
+                  <div class="login-successfully-email">
+                    <input type="text" name="id" id="id" required="true" autofocus="true" placeholder="Input your ID here" class="login-successfully-textinput thq-input thq-body-large" />
+                  </div>
+                
+                <div class="login-successfully-container5">
+                  <button
+                    type="submit"
+                    class="login-successfully-button thq-button-filled"
+                    id="submitBtn">
+                    <span class="thq-body-small">Log-in</span>
+                  </button>
                 </div>
+                </form>
+              </div>
             </div>
+          </div>
+          
+          {% if student %}
+          <div class="login-successfully-max-width2 thq-section-padding thq-section-max-width">
+            <div class="login-successfully-form-root2">
+              <h1 class="login-successfully-text4">
+                <h1>Welcome to USTP Library!</h1>
+                <br />
+              </h1>
+            </div>
+            <div class="login-successfully-container6">
+              <img src="{{ url_for('static', filename='uploads/' + student.image) }}" alt="Student Image" class="login-successfully-image2"/>
+              <div class="login-successfully-container7">
+                <div class="login-successfully-container8">
+                  <h2> {{ student.first_name }} {{ student.last_name }}</h2>
+                  <h4>COURSE :{{ student.course }}</h4>
+                </div>
+                <h4>ID: {{student.id}}</h4>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
         </div>
+      </div>
     </div>
-</div>
 {% endblock %}

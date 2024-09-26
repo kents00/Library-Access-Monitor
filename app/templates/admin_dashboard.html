@@ -1,16 +1,100 @@
-<!DOCTYPE html>
-<html lang="en">
+{% include "base.html" %}
+{% block dasboard %}
+<div class="container mt-5">
+    <h2>Admin Dashboard</h2>
 
-<head>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <title>Admin Dashboard</title>
-</head>
+    <!-- Date Filter Form -->
+    <form method="POST" action="{{ url_for('admin_dashboard') }}" class="mb-4">
+        <div class="form-group">
+            <label for="filter">Select Date Filter:</label>
+            <select class="form-control" id="filter" name="filter" required>
+                <option value="weekly">Last Week</option>
+                <option value="monthly">Last Month</option>
+                <option value="yearly">Last Year</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Filter</button>
+        <button type="submit" name="export_csv" class="btn btn-secondary">Export CSV</button>
+    </form>
 
-<body>
-    <h1>Admin Dashboard</h1>
-    <p>Daily Attendance Count: {{ daily_count }}</p>
-    <!-- Add more metrics here -->
-    <a href="/">Log Out</a>
-</body>
+    <div class="mt-4">
+        <h3>Library Analytics</h3>
 
-</html>
+        <!-- Most Visited Library Based on Course -->
+        <div class="mt-3">
+            <h4>Most Visited Library by Course</h4>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Course</th>
+                        <th>Visits</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for course, visits in course_visits %}
+                        <tr>
+                            <td>{{ course }}</td>
+                            <td>{{ visits }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-3">
+            <h4>Age Groups of Visitors</h4>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Age Group</th>
+                        <th>Visits</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Under 18</td>
+                        <td>{{ age_groups['Under 18'] }}</td>
+                    </tr>
+                    <tr>
+                        <td>18-25</td>
+                        <td>{{ age_groups['18-25'] }}</td>
+                    </tr>
+                    <tr>
+                        <td>26-35</td>
+                        <td>{{ age_groups['26-35'] }}</td>
+                    </tr>
+                    <tr>
+                        <td>36-50</td>
+                        <td>{{ age_groups['36-50'] }}</td>
+                    </tr>
+                    <tr>
+                        <td>Above 50</td>
+                        <td>{{ age_groups['Above 50'] }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Visits by Place of Residence -->
+        <div class="mt-3">
+            <h4>Visits by Place of Residence</h4>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Place of Residence</th>
+                        <th>Visits</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for place, visits in place_visits %}
+                        <tr>
+                            <td>{{ place }}</td>
+                            <td>{{ visits }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
