@@ -8,7 +8,6 @@ from sqlalchemy import extract
 from weasyprint import HTML
 import os
 import csv
-import os
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'
@@ -39,38 +38,30 @@ def export_attendance_csv(start_date):
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
-    student = None  # Initialize student as None to handle first-time visits
+    student = None
 
     if request.method == 'POST':
-        # Get the ID entered by the user
         student_id = request.form['id']
         print(f"Student ID entered: {student_id}")
 
-        # Query the student from the database
         student = Student.query.filter_by(id=student_id).first()
 
         if student:
-            # If the student exists, record their attendance
             new_attendance = Attendance(student_id=student.id, check_in_time=datetime.now())
             db.session.add(new_attendance)
-
-            # Update the login status
             student.is_logged_in = True
-            db.session.commit()  # Commit changes to the database
+            db.session.commit()
         else:
             flash('Invalid ID. Please try again.')
 
-    # Render the login page with the student information if available
     return render_template('login.html', student=student)
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin_dashboard():
-    # Check if admin is logged in
     if 'admin' in session:
         filter_type = request.form.get('filter') if request.method == 'POST' else 'weekly'
         today = datetime.now()
 
-        # Calculate date range based on filter type
         if filter_type == 'weekly':
             start_date = today - timedelta(weeks=1)
         elif filter_type == 'monthly':
@@ -81,16 +72,12 @@ def admin_dashboard():
         if request.method == 'POST' and 'export_csv' in request.form:
             return export_attendance_csv(start_date)
 
-        # Query attendance and student data
         attendance_data = db.session.query(Attendance, Student).join(Student, Attendance.student_id == Student.id).filter(Attendance.check_in_time >= start_date).all()
 
-        # Analytics 1: Most visited library based on course
         course_visits_raw = db.session.query(Student.course, db.func.count(Attendance.id).label('visits')).join(Attendance).filter(Attendance.check_in_time >= start_date).group_by(Student.course).all()
 
-        # Convert course_visits into a JSON-serializable format
         course_visits = [{"course": course, "visits": visits} for course, visits in course_visits_raw]
 
-        # Analytics 2: Age groups of visitors
         age_groups = {
             'Under 18': 0,
             '18-25': 0,
@@ -110,24 +97,20 @@ def admin_dashboard():
             else:
                 age_groups['Above 50'] += 1
 
-        # Analytics 3: Students' place of residence
         place_visits_raw = db.session.query(Student.Municipality, db.func.count(Attendance.id).label('visits')).join(Attendance).filter(Attendance.check_in_time >= start_date).group_by(Student.Municipality).all()
 
-        # Convert place_visits into a JSON-serializable format
         place_visits = [{"municipality": place, "visits": visits} for place, visits in place_visits_raw]
 
         logged_in_users = db.session.query(Student, db.func.max(Attendance.check_in_time).label('login_time')).join(Attendance, Student.id == Attendance.student_id).filter(Student.is_logged_in == True).group_by(Student.id).all()
 
         total_visitors = db.session.query(Attendance.student_id).filter(Attendance.check_in_time >= start_date).distinct().count()
 
-        # Analytics 4: Monthly course visits
         course_visits_by_month = db.session.query(
             Student.course,
             extract('month', Attendance.check_in_time).label('month'),
             db.func.count(Attendance.id).label('visits')
         ).join(Attendance).filter(Attendance.check_in_time >= start_date).group_by(Student.course, 'month').all()
 
-        # Organize visits into a dictionary by course and month
         monthly_course_visits = {
             'Information Technology': [0] * 12,
             'Marine Biology': [0] * 12,
@@ -136,9 +119,8 @@ def admin_dashboard():
 
         for course, month, visits in course_visits_by_month:
             if course in monthly_course_visits:
-                monthly_course_visits[course][month - 1] = visits  # Subtract 1 for zero-based index
+                monthly_course_visits[course][month - 1] = visits
 
-        # Debugging: Print the data structures to check correctness
         print(f"Course Visits: {course_visits}")
         print(f"Age Groups: {age_groups}")
         print(f"Place Visits: {place_visits}")
@@ -184,15 +166,6 @@ def manage_students():
     if 'admin' in session:
         if request.method == 'POST':
             if 'add' in request.form:
-                # Handle image upload
-                image_file = request.files['image']
-                image_filename = None
-                if image_file:
-                    image_filename = secure_filename(image_file.filename)
-                    image_path = os.path.join(app.config['UPLOAD_FOLDER'], image_filename)
-                    image_file.save(image_path)  # Save the file
-
-                # Add new student
                 new_student = Student(
                     id=request.form.get('id'),
                     first_name=request.form.get('first_name'),
@@ -200,80 +173,63 @@ def manage_students():
                     last_name=request.form.get('last_name'),
                     course=request.form.get('course'),
                     age=request.form.get('age'),
-                    place_of_residence=request.form.get('place_of_residence'),
-                    image=image_filename  # Store image file name
+                    barangay=request.form.get('Barangay'),
+                    municipality=request.form.get('Municipality'),
+                    province=request.form.get('Province'),
                 )
                 db.session.add(new_student)
                 db.session.commit()
                 flash('Student added successfully!')
 
             elif 'remove' in request.form:
-                # Remove existing student
                 student_id = request.form.get('id')
                 student = Student.query.get(student_id)
                 if student:
                     db.session.delete(student)
                     db.session.commit()
-                    flash('Student removed successfully!')
+                    flash(f'Student with ID {student_id} deleted successfully!')
                 else:
                     flash('Student not found.')
 
             return redirect(url_for('manage_students'))
 
         students = Student.query.all()
-        return render_template('manage_students.html', students=students)
+        return render_template('admin_manage_students.html', students=students)
     else:
         flash('Unauthorized access!')
         return redirect(url_for('admin_login'))
 
-@app.errorhandler(404)
-def not_found(error):
-    return render_template('404.html', error_code=404, error_message="Page not found."), 404
+@app.route('/admin/edit_student/<int:student_id>', methods=['GET', 'POST'])
+def edit_student(student_id):
+    student = Student.query.get_or_404(student_id)
 
-@app.errorhandler(500)
-def internal_error(error):
-    return render_template('404.html', error_code=500, error_message="Internal server error."), 500
+    if request.method == 'POST':
+        try:
+            student.first_name = request.form['firstName']
+            student.middle_name = request.form['middleName']
+            student.last_name = request.form['lastName']
+            student.course = request.form['course']
+            student.age = request.form['age']
+            student.Barangay = request.form['Barangay']
+            student.Municipality = request.form['Municipality']
+            student.Province = request.form['Province']
 
-def handle_error(exception):
-    # Log the exception or perform any specific error handling here
-    return render_template('404.html', error_code=500, error_message=str(exception)), 500
+            if 'image' in request.files and request.files['image'].filename != '':
+                image_file = request.files['image']
+                image_filename = secure_filename(image_file.filename)
+                image_path = os.path.join(app.config['UPLOAD_FOLDER'], image_filename)
+                image_file.save(image_path)
+                student.image = image_filename
 
-@app.route('/export/csv')
-def export_csv():
-    # Query to get the logged-in users
-    logged_in_users = db.session.query(Student, db.func.max(Attendance.check_in_time).label('login_time')).join(Attendance, Student.id == Attendance.student_id).filter(Student.is_logged_in == True).group_by(Student.id).all()
+            db.session.commit()
+            flash('Student updated successfully!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating student: {str(e)}', 'danger')
 
-    # Create a CSV response
-    response = make_response()
-    response.headers["Content-Disposition"] = "attachment; filename=logged_in_users.csv"
-    response.headers["Content-Type"] = "text/csv"
+        return redirect(url_for('manage_students'))
 
-    writer = csv.writer(response.stream)
-    writer.writerow(['#', 'Name', 'Course', 'Login Time'])  # Write the header
+    return render_template('admin_edit_student.html', student=student)
 
-    for index, (student, login_time) in enumerate(logged_in_users):
-        writer.writerow([index + 1, f"{student.first_name} {student.last_name}", student.course, login_time.strftime('%I:%M %p')])
-
-    return response
-
-@app.route('/export/pdf')
-def export_pdf():
-    logged_in_users = db.session.query(Student, db.func.max(Attendance.check_in_time).label('login_time')).join(Attendance, Student.id == Attendance.student_id).filter(Student.is_logged_in == True).group_by(Student.id).all()
-
-    # Prepare data with indices
-    indexed_users = [(index + 1, student, login_time) for index, (student, login_time) in enumerate(logged_in_users)]
-
-    # Render the PDF template with indexed users
-    rendered = render_template('pdf_template.html', logged_in_users=indexed_users)
-    pdf = HTML(string=rendered).write_pdf()
-
-    response = make_response(pdf)
-    response.headers['Content-Disposition'] = 'attachment; filename=logged_in_users.pdf'
-    response.headers['Content-Type'] = 'application/pdf'
-
-    return response
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+if __name__ == "__main__":
     app.run(debug=True)

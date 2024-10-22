@@ -1,0 +1,221 @@
+body {
+    font-family: Arial, sans-serif;
+}
+
+.wrapper {
+    display: flex;
+    width: 100%;
+}
+
+.sidebar {
+    width: 250px;
+    height: 100vh;
+    background-color: #343a40;
+    color: white;
+    padding: 15px;
+    position: fixed;
+}
+
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar ul li {
+    margin: 15px 0;
+}
+
+.sidebar ul li a {
+    text-decoration: none;
+    color: #f8f9fa;
+    display: block;
+    padding: 10px;
+    border-radius: 5px;
+    transition: 0.3s;
+}
+
+.sidebar ul li a:hover {
+    background-color: #495057;
+}
+
+.sidebar ul li a i {
+    margin-right: 10px;
+}
+
+/* Main Content */
+.main-content {
+    margin-left: 250px;
+    padding: 20px;
+    width: calc(100% - 250px);
+    background-color: #f8f9fa;
+}
+
+.card {
+    margin-bottom: 20px;
+}
+
+.card-header {
+    font-weight: bold;
+    color: #5A67D8;
+}
+
+.table thead th {
+    background-color: #edf2f7;
+}
+
+.icon {
+    font-size: 24px;
+    color: #6C63FF;
+}
+
+.chart {
+    min-height: 250px;
+}
+
+.small-card {
+    text-align: center;
+}
+
+.small-card .icon {
+    font-size: 36px;
+}
+
+.small-card h4 {
+    font-size: 22px;
+    margin-top: 10px;
+}
+
+.small-card p {
+    font-size: 16px;
+}
+
+.pie-chart {
+    position: relative;
+    width: 100%;
+    max-width: 300px;
+    margin: auto;
+}
+
+.table-container {
+    margin-top: 20px;
+}
+
+.table-container .card {
+    margin-bottom: 20px;
+}
+
+.scrollable-table {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.scrollable-table table {
+    margin-bottom: 0;
+}
+
+.search-input {
+    margin-bottom: 10px;
+}
+
+.visitor {
+    margin-top: 30px
+}
+.student-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.student-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+    background-color: white;
+    margin-bottom: 5px;
+    border-radius: 5px;
+}
+
+.student-name {
+    font-size: 20px;
+    font-weight: bold;
+    color: #495057;
+}
+
+.student-id {
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.action-buttons button {
+    margin-left: 10px;
+}
+
+.search-bar {
+    padding: 10px;
+    border-radius: 5px;
+    background-color: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Modal styling */
+.modal-content {
+    border-radius: 10px;
+}
+
+.btn-delete {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-edit {
+    background-color: #ffc107;
+    color: white;
+}
+
+.student-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.student-list::-webkit-scrollbar-thumb {
+    background-color: #6c757d;
+    border-radius: 10px;
+}
+.form-container {
+    margin: 50px auto;
+    padding: 20px;
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    max-width: 800px;
+}
+
+.form-heading {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    color: #495057;
+}
+
+.form-label {
+    font-weight: 500;
+}
+
+.form-control {
+    margin-bottom: 15px;
+}
+
+.btn-submit {
+    background-color: #6f42c1;
+    color: white;
+}
+
+.btn-cancel {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-upload {
+    background-color: #6610f2;
+    color: white;
+}

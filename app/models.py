@@ -15,7 +15,7 @@ class Student(db.Model):
     Municipality = db.Column(db.String(100), nullable=False)
     Province = db.Column(db.String(100), nullable=False)
 
-    image = db.Column(db.String(200), nullable=True)  # Path to the image file
+    image = db.Column(db.String(200), nullable=True)  
     is_logged_in = db.Column(db.Boolean, default=False)
 
 class Attendance(db.Model):
