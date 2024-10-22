@@ -2,3 +2,4 @@ Flask
 Flask-SQLAlchemy
 Werkzeug
 Flask-Migrate
+weasyprint
