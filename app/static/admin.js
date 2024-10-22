@@ -37,10 +37,10 @@ function exportPDF() {
 
 let studentToDelete = null;
 
-// Function to store the student ID to be deleted
 function setStudentToDelete(studentId) {
     studentToDelete = studentId;
-    document.getElementById('deleteStudentId').value = studentToDelete;
+    // Set the value of a hidden input field in the delete form
+    document.getElementById('deleteStudentId').value = studentId;
 }
 
 // Function to handle edit action

@@ -1,62 +1,61 @@
 {% include "admin_base.html" %}
 {% block admin_home %}
-    <div class="main-content">
-        <h2>Manage Students</h2>
+<div class="main-content">
+    <h2>Manage Students</h2>
 
-        <!-- Search Bar -->
-        <div class="search-bar mb-3">
-            <div class="input-group">
-                <input type="text" class="form-control" placeholder="Search by student name or ID" id="searchStudent"
-                    onkeyup="searchStudents()">
-                <button class="btn btn-primary" type="button">
-                    <i class="fas fa-search"></i>
+    <!-- Search Bar -->
+    <div class="search-bar mb-3">
+        <div class="input-group">
+            <input type="text" class="form-control" placeholder="Search by student name or ID" id="searchStudent"
+                onkeyup="searchStudents()">
+            <button class="btn btn-primary" type="button">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Student List -->
+    <div class="student-list list-group" id="studentList">
+        {% for student in students %}
+        <div class="student-item list-group-item">
+            <div>
+                <span class="student-name">{{ student.first_name }} {{ student.middle_name }} {{ student.last_name
+                    }}</span>
+                <br>
+                <span class="student-id">ID: {{ student.id }}</span>
+            </div>
+            <div class="action-buttons">
+                <button class="btn btn-edit btn-sm" onclick="editStudent({{ student.id }})">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+                <button class="btn btn-delete btn-sm" data-bs-toggle="modal" data-bs-target="#deleteModal"
+                    onclick="setStudentToDelete('{{ student.id }}')">
+                    <i class="fas fa-trash"></i> Delete
                 </button>
             </div>
         </div>
-
-        <!-- Student List -->
-        <div class="student-list list-group" id="studentList">
-            {% for student in students %}
-            <div class="student-item list-group-item">
-                <div>
-                    <span class="student-name">{{ student.first_name }} {{ student.middle_name }} {{ student.last_name
-                        }}</span>
-                    <br>
-                    <span class="student-id">ID: {{ student.id }}</span>
-                </div>
-                <div class="action-buttons">
-                    <button class="btn btn-edit btn-sm" onclick="editStudent({{ student.id }})">
-                        <i class="fas fa-edit"></i> Edit
-                    </button>
-                    <button class="btn btn-delete btn-sm" data-bs-toggle="modal" data-bs-target="#deleteModal"
-                        onclick="setStudentToDelete('{{ student.id }}')">
-                        <i class="fas fa-trash"></i> Delete
-                    </button>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
+        {% endfor %}
     </div>
+</div>
 
-    <!-- Delete Confirmation Modal -->
-    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="deleteModalLabel">Delete Confirmation</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    Are you sure you want to delete this student?
-                </div>
-                <div class="modal-footer">
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete this student?
+            </div>
+            <div class="modal-footer">
+                <form method="POST" action="/admin/manage_students">
+                    <input type="hidden" name="id" id="deleteStudentId" value="">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <form method="POST">
-                        <input type="hidden" id="deleteStudentId" name="id">
-                        <button type="submit" name="remove" class="btn btn-delete">Yes, delete this student</button>
-                    </form>
-                </div>
+                    <button type="submit" name="remove" class="btn btn-danger">Yes, Delete this Student</button>
+                </form>
             </div>
         </div>
     </div>
+</div>
 {% endblock %}

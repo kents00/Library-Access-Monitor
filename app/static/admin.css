@@ -121,7 +121,7 @@ body {
     margin-top: 30px
 }
 .student-list {
-    max-height: 400px;
+    max-height: 700px;
     overflow-y: auto;
 }
 

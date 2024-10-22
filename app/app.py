@@ -1,9 +1,9 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import check_password_hash
 from werkzeug.utils import secure_filename
 from models import db, Student, Attendance, User
 from datetime import datetime, timedelta
-from flask import Response, make_response, render_template
+from flask import Response, render_template, jsonify
 from sqlalchemy import extract
 from weasyprint import HTML
 import os
@@ -230,6 +230,19 @@ def edit_student(student_id):
         return redirect(url_for('manage_students'))
 
     return render_template('admin_edit_student.html', student=student)
+
+@app.route('/admin/delete_student/<int:student_id>', methods=['DELETE'])
+def delete_student(student_id):
+    if 'admin' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized access'}), 403
+
+    student = Student.query.get(student_id)
+    if student:
+        db.session.delete(student)
+        db.session.commit()
+        return jsonify({'success': True, 'message': f'Student {student_id} deleted successfully'}), 200
+    else:
+        return jsonify({'success': False, 'message': 'Student not found'}), 404
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0")
