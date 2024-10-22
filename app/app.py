@@ -232,4 +232,4 @@ def edit_student(student_id):
     return render_template('admin_edit_student.html', student=student)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0")
