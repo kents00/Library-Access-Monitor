@@ -31,13 +31,24 @@ def export_attendance_csv(start_date):
     attendance_data = db.session.query(Attendance, Student).join(Student).filter(Attendance.check_in_time >= start_date).all()
 
     def generate():
-        yield b"ID,First Name,Last Name,Course,Check-in Time\n"
+        yield "ID,First Name,Last Name,Course,Check-in Time\n"
         for attendance, student in attendance_data:
-            yield f"{student.id},{student.first_name},{student.last_name},{student.course},{attendance.check_in_time}\n".encode('utf-8')
+            yield f"{student.id},{student.first_name},{student.last_name},{student.course},{attendance.check_in_time}\n"
 
     return Response(generate(),
                     mimetype='text/csv',
                     headers={"Content-Disposition": "attachment;filename=attendance_data.csv"})
+
+def export_attendance_pdf(start_date):
+    attendance_data = db.session.query(Attendance, Student).join(Student).filter(Attendance.check_in_time >= start_date).all()
+
+    rendered_html = render_template("attendance_pdf.html", attendance_data=attendance_data)
+    pdf = HTML(string=rendered_html).write_pdf()
+
+    return Response(pdf,
+                    mimetype='application/pdf',
+                    headers={"Content-Disposition": "attachment;filename=attendance_data.pdf"})
+
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
@@ -246,6 +257,24 @@ def delete_student(student_id):
         return jsonify({'success': True, 'message': f'Student {student_id} deleted successfully'}), 200
     else:
         return jsonify({'success': False, 'message': 'Student not found'}), 404
+
+@app.route('/export/csv')
+def export_csv():
+    if 'admin' not in session:
+        flash('Unauthorized access! Admins only.')
+        return redirect(url_for('admin_login'))
+
+    start_date = datetime.now() - timedelta(weeks=1)
+    return export_attendance_csv(start_date)
+
+@app.route('/export/pdf')
+def export_pdf():
+    if 'admin' not in session:
+        flash('Unauthorized access! Admins only.')
+        return redirect(url_for('admin_login'))
+
+    start_date = datetime.now() - timedelta(weeks=1)
+    return export_attendance_pdf(start_date)
 
 if __name__ == "__main__":
     from waitress import serve
