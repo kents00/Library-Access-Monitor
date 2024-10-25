@@ -42,7 +42,7 @@ def export_attendance_csv(start_date):
 def export_attendance_pdf(start_date):
     attendance_data = db.session.query(Attendance, Student).join(Student).filter(Attendance.check_in_time >= start_date).all()
 
-    rendered_html = render_template("attendance_pdf.html", attendance_data=attendance_data)
+    rendered_html = render_template("pdf_template.html", attendance_data=attendance_data)
     pdf = HTML(string=rendered_html).write_pdf()
 
     return Response(pdf,
