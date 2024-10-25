@@ -11,7 +11,6 @@ import csv
 
 app = Flask(__name__)
 
-# Securely set configurations
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///library.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -41,8 +40,7 @@ def export_attendance_csv(start_date):
 
 def export_attendance_pdf(start_date):
     attendance_data = db.session.query(Attendance, Student).join(Student).filter(Attendance.check_in_time >= start_date).all()
-
-    rendered_html = render_template("pdf_template.html", attendance_data=attendance_data)
+    rendered_html = render_template("pdf_template.html",attendance_data=attendance_data,datetime=datetime)
     pdf = HTML(string=rendered_html).write_pdf()
 
     return Response(pdf,
