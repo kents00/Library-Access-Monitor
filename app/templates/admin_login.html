@@ -1,60 +1,71 @@
 {% include "base.html" %}
-{% block admin_login %}
-
-<div class="admin-login-container1">
-  <div class="admin-login-container2 thq-section-padding">
-    <div
-      class="admin-login-max-width thq-section-padding thq-section-max-width">
-      <div class="admin-login-form-root">
-        <div class="admin-login-form1">
-          <h2 class="admin-login-text1 thq-heading-2">
-            <span>Library Admin Login</span>
-            <br />
-          </h2>
-
-          <form method="POST"
-            action="{{ url_for('admin_login') }}" class="admin-login-form2">
-            <div class="admin-login-email">
-              <label for="thq-sign-in-1-password" class="thq-body-large">
-                Username
-              </label>
-              <input
-                type="text" id="username" name="username" placeholder="Enter username"  class="admin-login-textinput1 thq-input thq-body-large" required/>
-            </div>
-            <div class="admin-login-password">
-              <div class="admin-login-container3">
-                <label
-                  for="thq-sign-in-3-password"
-                  class="thq-body-large">
-                  Password
-                </label>
-              </div>
-              <input type="password" id="password" name="password" placeholder="Enter password" class="admin-login-textinput2 thq-input thq-body-large" required/>
-              <a
-                href="mailto:kentedoloverio24@gmail.com?subject=Reset Password [ USTP Library ]"
-                class="admin-login-link thq-body-small">
-                Forgot password
-              </a>
-              {% with messages = get_flashed_messages() %}
-              {% if messages %}
-              <div class="alert alert-warning">
-                {{ messages[0] }}
-              </div>
-              {% endif %}
-              {% endwith %}
-            </div>
-            <div class="admin-login-container4">
-              <button
-                type="submit"
-                class="admin-login-button thq-button-filled">
-                <span class="thq-body-small">Login</span>
-              </button>
-            </div>
-          </form>
+{% block home %}
+<div>
+  <div class="login-successfully-container1">
+    <div class="login-successfully-container2">
+      <div class="login-successfully-container3">
+        <img alt="image" src="{{ url_for('static', filename='images/ustp-logo.png') }}"
+          class="login-successfully-image1" />
+        <div class="login-successfully-container4">
+          <h1 class="login-successfully-text1">
+            Library Access Monitor
+          </h1>
+          <span class="login-successfully-text2">
+            Made by Group 3 | Kent Edoloverio
+          </span>
         </div>
       </div>
+      <div class="login-successfully-max-width1 thq-section-padding thq-section-max-width">
+        <div class="login-successfully-form-root1">
+          <div class="login-successfully-form1">
+
+            <form method="POST" action="/" id="loginForm" class="login-successfully-form2">
+              <div class="login-successfully-email">
+                <input type="text" name="id" id="id" required="true" autofocus="true" placeholder="Input your ID here"
+                  class="login-successfully-textinput thq-input thq-body-large" />
+              </div>
+
+              <div class="login-successfully-container5">
+                <button type="submit" class="login-successfully-button thq-button-filled" id="submitBtn">
+                  <span class="thq-body-small">Log-in</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      {% if student %}
+      <div class="login-successfully-max-width2 thq-section-padding thq-section-max-width">
+        <div class="login-successfully-form-root2">
+          <h1 class="login-successfully-text4">
+            <h1>Welcome to USTP Library!</h1>
+            <br />
+          </h1>
+        </div>
+        <div class="login-successfully-container6">
+          <img src="{{ url_for('static', filename='uploads/' + student.image) }}" alt="Student Image"
+            class="login-successfully-image2" />
+          <div class="login-successfully-container7">
+            <div class="login-successfully-container8">
+              <h2> {{ student.first_name }} {{ student.last_name }}</h2>
+              <h4>COURSE :{{ student.course.course_name }}</h4>
+            </div>
+            <h4>ID: {{student.id}}</h4>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      {% with messages = get_flashed_messages() %}
+      {% if messages %}
+      <div class="alert alert-warning" style="text-align: center;">
+        {{ messages[0] }}
+      </div>
+      {% endif %}
+      {% endwith %}
+
     </div>
-    <div class="admin-login-container5"></div>
   </div>
 </div>
 {% endblock %}

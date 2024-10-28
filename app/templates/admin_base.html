@@ -14,7 +14,11 @@
 <body>
     <div class="wrapper">
         <nav class="sidebar">
-            <h4>Admin Dashboard</h4>
+            <div class="sidebar-logo text-center mb-3">
+                <img src="{{ url_for('static', filename='images/ustp-logo.png') }}" alt="USTP Logo"
+                    style="max-width: 100%; height: auto;">
+            </div>
+            
             <ul>
                 <li>
                     <a href="/admin">

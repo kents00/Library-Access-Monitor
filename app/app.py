@@ -68,8 +68,7 @@ def login():
             student.is_logged_in = True
             db.session.commit()
         else:
-            flash('Invalid ID. Please try again.')
-
+            flash('No student ID number found. Please try again.')
     return render_template('login.html', student=student)
 
 @app.route('/admin', methods=['GET', 'POST'])
@@ -99,7 +98,12 @@ def admin_dashboard():
             .all()
         )
 
-        course_visits = [{"course": course, "visits": visits} for course, visits in course_visits_raw]
+        course_mapping = {course.id: course.course_name for course in Course.query.all()}
+
+        course_visits = [
+            {"course": course_mapping[course_id], "visits": visits}
+            for course_id, visits in course_visits_raw
+        ]
 
         age_groups = {
             'Under 18': 0,
@@ -240,95 +244,101 @@ def manage_students():
 
 @app.route('/admin/edit_student/<int:student_id>', methods=['GET', 'POST'])
 def edit_student(student_id):
-    student = Student.query.get_or_404(student_id)
-    courses = Course.query.all()
+    if 'admin' in session:
+        student = Student.query.get_or_404(student_id)
+        courses = Course.query.all()
+        if request.method == 'POST':
+            try:
+                student.first_name = request.form['firstName']
+                student.middle_name = request.form['middleName']
+                student.last_name = request.form['lastName']
+                student.age = request.form['age']
 
-    if request.method == 'POST':
-        try:
-            student.first_name = request.form['firstName']
-            student.middle_name = request.form['middleName']
-            student.last_name = request.form['lastName']
-            student.age = request.form['age']
+                course_id = request.form['course']
+                student.course_id = course_id
 
-            course_id = request.form['course']
-            student.course_id = course_id
+                location = Location.query.get(student.location_id)
+                if location:
+                    location.barangay = request.form['Barangay']
+                    location.municipality = request.form['Municipality']
+                    location.province = request.form['Province']
+                else:
+                    flash('Location not found.', 'danger')
+                    return redirect(url_for('manage_students'))
 
-            location = Location.query.get(student.location_id)
-            if location:
-                location.barangay = request.form['Barangay']
-                location.municipality = request.form['Municipality']
-                location.province = request.form['Province']
-            else:
-                flash('Location not found.', 'danger')
-                return redirect(url_for('manage_students'))
+                if 'image' in request.files and request.files['image'].filename != '':
+                    image_file = request.files['image']
+                    image_filename = secure_filename(image_file.filename)
+                    image_path = os.path.join(app.config['UPLOAD_FOLDER'], image_filename)
+                    image_file.save(image_path)
+                    student.image = image_filename
 
-            if 'image' in request.files and request.files['image'].filename != '':
-                image_file = request.files['image']
-                image_filename = secure_filename(image_file.filename)
-                image_path = os.path.join(app.config['UPLOAD_FOLDER'], image_filename)
-                image_file.save(image_path)
-                student.image = image_filename
+                db.session.commit()
+                flash('Student updated successfully!', 'success')
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Error updating student: {str(e)}', 'danger')
 
-            db.session.commit()
-            flash('Student updated successfully!', 'success')
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error updating student: {str(e)}', 'danger')
-
-        return redirect(url_for('manage_students'))
-
-    return render_template('admin_edit_student.html', student=student, courses=courses)
+            return redirect(url_for('manage_students'))
+        return render_template('admin_edit_student.html', student=student, courses=courses)
+    else:
+        flash('Unauthorized access!')
+        return redirect(url_for('admin_login'))
 
 @app.route('/admin/add_student', methods=['GET', 'POST'])
 def add_student():
-    if request.method == 'POST':
-        try:
-            student_id = request.form['studentId']
-            first_name = request.form['firstName']
-            middle_name = request.form['middleName']
-            last_name = request.form['lastName']
-            course_id = request.form['course']
-            age = request.form['age']
-            barangay = request.form['Barangay']
-            municipality = request.form['Municipality']
-            province = request.form['Province']
+    if 'admin' in session:
+        if request.method == 'POST':
+            try:
+                student_id = request.form['studentId']
+                first_name = request.form['firstName']
+                middle_name = request.form['middleName']
+                last_name = request.form['lastName']
+                course_id = request.form['course']
+                age = request.form['age']
+                barangay = request.form['Barangay']
+                municipality = request.form['Municipality']
+                province = request.form['Province']
 
-            image_file = request.files['image']
-            if image_file and allowed_file(image_file.filename):
-                filename = secure_filename(image_file.filename)
-                image_path = os.path.join('static/uploads', filename)
-                image_file.save(image_path)
-            else:
-                filename = 'default_image.jpg'
+                image_file = request.files['image']
+                if image_file and allowed_file(image_file.filename):
+                    filename = secure_filename(image_file.filename)
+                    image_path = os.path.join('static/uploads', filename)
+                    image_file.save(image_path)
+                else:
+                    filename = 'default_image.jpg'
 
 
-            location = Location(barangay=barangay, municipality=municipality, province=province)
-            db.session.add(location)
-            db.session.commit()
+                location = Location(barangay=barangay, municipality=municipality, province=province)
+                db.session.add(location)
+                db.session.commit()
 
-            student = Student(
-                id=student_id,
-                first_name=first_name,
-                middle_name=middle_name,
-                last_name=last_name,
-                course_id=course_id,
-                age=age,
-                image=filename,
-                is_logged_in=False,
-                location_id=location.id
-            )
+                student = Student(
+                    id=student_id,
+                    first_name=first_name,
+                    middle_name=middle_name,
+                    last_name=last_name,
+                    course_id=course_id,
+                    age=age,
+                    image=filename,
+                    is_logged_in=False,
+                    location_id=location.id
+                )
 
-            db.session.add(student)
-            db.session.commit()
-            flash('Student added successfully!', 'success')
-            return redirect(url_for('manage_students'))
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error adding student: {str(e)}', 'danger')
-            return redirect(url_for('add_student'))
+                db.session.add(student)
+                db.session.commit()
+                flash('Student added successfully!', 'success')
+                return redirect(url_for('manage_students'))
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Error adding student: {str(e)}', 'danger')
+                return redirect(url_for('add_student'))
 
-    courses = Course.query.all()
-    return render_template('admin_add_student.html', courses=courses)
+        courses = Course.query.all()
+        return render_template('admin_add_student.html', courses=courses)
+    else:
+        flash('Unauthorized access!')
+        return redirect(url_for('admin_login'))
 
 
 @app.route('/admin/delete_student/<int:student_id>', methods=['DELETE'])
@@ -363,4 +373,5 @@ def export_pdf():
     return export_attendance_pdf(start_date)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    from waitress import serve
+    serve(app, host="0.0.0.0", port=os.getenv("PORT", 5000))

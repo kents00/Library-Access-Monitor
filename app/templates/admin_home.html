@@ -2,7 +2,7 @@
 {% block admin_home %}
         <!-- Main Content -->
         <div class="main-content">
-            <h2 class="my-4">Admin Dashboard</h2>
+            <h2 class="my-4">Library Access Monitor Dashboard</h2>
 
             <div class="row">
                 <!-- Cards with icons -->
@@ -28,16 +28,13 @@
                 <div class="col-md-4 small-card">
                     <i class="fas fa-user icon"></i>
                     {% set has_visits = false %}
+
                     {% for age_group, visits in age_groups.items() %}
                     {% if visits > 0 %}
                     <h4>{{ age_group }}</h4>
                     {% set has_visits = true %}
                     {% endif %}
                     {% endfor %}
-
-                    {% if not has_visits %}
-                    <h4>No age group visit data available.</h4>
-                    {% endif %}
 
                     <p>Age Groups of Visitors</p>
                 </div>
@@ -109,7 +106,7 @@
                                 <tr>
                                     <td>{{ loop.index }}</td>
                                     <td>{{ student.first_name }} {{ student.last_name }}</td>
-                                    <td>{{ student.course }}</td>
+                                    <td>{{ student.course.course_name }}</td>
                                     <td>{{ login_time.strftime('%I:%M %p') }}</td>
                                 </tr>
                                 {% else %}
