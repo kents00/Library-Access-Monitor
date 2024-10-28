@@ -34,6 +34,11 @@
                     {% set has_visits = true %}
                     {% endif %}
                     {% endfor %}
+
+                    {% if not has_visits %}
+                    <h4>No age group visit data available.</h4>
+                    {% endif %}
+
                     <p>Age Groups of Visitors</p>
                 </div>
 

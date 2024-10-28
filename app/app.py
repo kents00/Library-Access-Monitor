@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from werkzeug.security import check_password_hash
 from werkzeug.utils import secure_filename
-from models import db, Student, Attendance, User
+from models import db, Student, Attendance, User, Location, Course
 from datetime import datetime, timedelta
 from flask import Response, render_template, jsonify
 from sqlalchemy import extract
@@ -25,6 +25,10 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
+
+def allowed_file(filename):
+    allowed_extensions = {'gif', 'png', 'jpg', 'jpeg', 'bmp', 'webp', 'avif'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
 
 def export_attendance_csv(start_date):
     attendance_data = db.session.query(Attendance, Student).join(Student).filter(Attendance.check_in_time >= start_date).all()
@@ -84,9 +88,16 @@ def admin_dashboard():
         if request.method == 'POST' and 'export_csv' in request.form:
             return export_attendance_csv(start_date)
 
-        attendance_data = db.session.query(Attendance, Student).join(Student, Attendance.student_id == Student.id).filter(Attendance.check_in_time >= start_date).all()
+        attendance_data = db.session.query(Attendance, Student).select_from(Attendance).join(Student, Attendance.student_id == Student.id).filter(Attendance.check_in_time >= start_date).all()
 
-        course_visits_raw = db.session.query(Student.course, db.func.count(Attendance.id).label('visits')).join(Attendance).filter(Attendance.check_in_time >= start_date).group_by(Student.course).all()
+        course_visits_raw = (
+            db.session.query(Student.course, db.func.count(Attendance.id).label('visits'))
+            .select_from(Attendance)
+            .join(Student, Attendance.student_id == Student.id)
+            .filter(Attendance.check_in_time >= start_date)
+            .group_by(Student.course)
+            .all()
+        )
 
         course_visits = [{"course": course, "visits": visits} for course, visits in course_visits_raw]
 
@@ -109,7 +120,15 @@ def admin_dashboard():
             else:
                 age_groups['Above 50'] += 1
 
-        place_visits_raw = db.session.query(Student.Municipality, db.func.count(Attendance.id).label('visits')).join(Attendance).filter(Attendance.check_in_time >= start_date).group_by(Student.Municipality).all()
+        place_visits_raw = (
+            db.session.query(Location.municipality, db.func.count(Attendance.id).label('visits'))
+            .join(Student, Student.location_id == Location.id)
+            .join(Attendance, Attendance.student_id == Student.id)
+            .filter(Attendance.check_in_time >= start_date)
+            .group_by(Location.municipality)
+            .all()
+        )
+
 
         place_visits = [{"municipality": place, "visits": visits} for place, visits in place_visits_raw]
 
@@ -117,11 +136,19 @@ def admin_dashboard():
 
         total_visitors = db.session.query(Attendance.student_id).filter(Attendance.check_in_time >= start_date).distinct().count()
 
-        course_visits_by_month = db.session.query(
-            Student.course,
-            extract('month', Attendance.check_in_time).label('month'),
-            db.func.count(Attendance.id).label('visits')
-        ).join(Attendance).filter(Attendance.check_in_time >= start_date).group_by(Student.course, 'month').all()
+        course_visits_by_month = (
+            db.session.query(
+                Course.course_name,
+                extract('month', Attendance.check_in_time).label('month'),
+                db.func.count(Attendance.id).label('visits')
+            )
+            .select_from(Student)
+            .join(Course, Student.course_id == Course.id)
+            .join(Attendance, Attendance.student_id == Student.id)
+            .filter(Attendance.check_in_time >= start_date)
+            .group_by(Course.course_name, extract('month', Attendance.check_in_time))
+            .all()
+        )
 
         monthly_course_visits = {
             'Information Technology': [0] * 12,
@@ -214,17 +241,26 @@ def manage_students():
 @app.route('/admin/edit_student/<int:student_id>', methods=['GET', 'POST'])
 def edit_student(student_id):
     student = Student.query.get_or_404(student_id)
+    courses = Course.query.all()
 
     if request.method == 'POST':
         try:
             student.first_name = request.form['firstName']
             student.middle_name = request.form['middleName']
             student.last_name = request.form['lastName']
-            student.course = request.form['course']
             student.age = request.form['age']
-            student.Barangay = request.form['Barangay']
-            student.Municipality = request.form['Municipality']
-            student.Province = request.form['Province']
+
+            course_id = request.form['course']
+            student.course_id = course_id
+
+            location = Location.query.get(student.location_id)
+            if location:
+                location.barangay = request.form['Barangay']
+                location.municipality = request.form['Municipality']
+                location.province = request.form['Province']
+            else:
+                flash('Location not found.', 'danger')
+                return redirect(url_for('manage_students'))
 
             if 'image' in request.files and request.files['image'].filename != '':
                 image_file = request.files['image']
@@ -241,7 +277,59 @@ def edit_student(student_id):
 
         return redirect(url_for('manage_students'))
 
-    return render_template('admin_edit_student.html', student=student)
+    return render_template('admin_edit_student.html', student=student, courses=courses)
+
+@app.route('/admin/add_student', methods=['GET', 'POST'])
+def add_student():
+    if request.method == 'POST':
+        try:
+            student_id = request.form['studentId']
+            first_name = request.form['firstName']
+            middle_name = request.form['middleName']
+            last_name = request.form['lastName']
+            course_id = request.form['course']
+            age = request.form['age']
+            barangay = request.form['Barangay']
+            municipality = request.form['Municipality']
+            province = request.form['Province']
+
+            image_file = request.files['image']
+            if image_file and allowed_file(image_file.filename):
+                filename = secure_filename(image_file.filename)
+                image_path = os.path.join('static/uploads', filename)
+                image_file.save(image_path)
+            else:
+                filename = 'default_image.jpg'
+
+
+            location = Location(barangay=barangay, municipality=municipality, province=province)
+            db.session.add(location)
+            db.session.commit()
+
+            student = Student(
+                id=student_id,
+                first_name=first_name,
+                middle_name=middle_name,
+                last_name=last_name,
+                course_id=course_id,
+                age=age,
+                image=filename,
+                is_logged_in=False,
+                location_id=location.id
+            )
+
+            db.session.add(student)
+            db.session.commit()
+            flash('Student added successfully!', 'success')
+            return redirect(url_for('manage_students'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error adding student: {str(e)}', 'danger')
+            return redirect(url_for('add_student'))
+
+    courses = Course.query.all()
+    return render_template('admin_add_student.html', courses=courses)
+
 
 @app.route('/admin/delete_student/<int:student_id>', methods=['DELETE'])
 def delete_student(student_id):
@@ -275,5 +363,4 @@ def export_pdf():
     return export_attendance_pdf(start_date)
 
 if __name__ == "__main__":
-    from waitress import serve
-    serve(app, host="0.0.0.0", port=os.getenv("PORT", 5000))
+    app.run(host="0.0.0.0", port=5000, debug=True)
