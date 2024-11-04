@@ -1,10 +1,11 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
+from models import db, Student, Attendance, User, Location, Course
+from flask import Response, render_template, jsonify
 from werkzeug.security import check_password_hash
 from werkzeug.utils import secure_filename
-from models import db, Student, Attendance, User, Location, Course
 from datetime import datetime, timedelta
-from flask import Response, render_template, jsonify
 from sqlalchemy import extract
+from functools import wraps
 from weasyprint import HTML
 import os
 import csv
@@ -12,7 +13,8 @@ import csv
 app = Flask(__name__)
 
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///library.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
+    'DATABASE_URL', 'sqlite:///library.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
@@ -26,25 +28,48 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'admin' not in session:
+            flash('Unauthorized access! Please log in as an admin.')
+            return redirect(url_for('admin_login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
 def allowed_file(filename):
     allowed_extensions = {'gif', 'png', 'jpg', 'jpeg', 'bmp', 'webp', 'avif'}
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
 
+
 def export_attendance_csv(start_date):
-    attendance_data = db.session.query(Attendance, Student).join(Student).filter(Attendance.check_in_time >= start_date).all()
+    attendance_data = (
+        db.session.query(Attendance, Student, Course.course_name)
+        .join(Student, Attendance.student_id == Student.id)
+        .join(Course, Student.course_id == Course.id)
+        .filter(Attendance.check_in_time >= start_date)
+        .all()
+    )
 
     def generate():
         yield "ID,First Name,Last Name,Course,Check-in Time\n"
-        for attendance, student in attendance_data:
-            yield f"{student.id},{student.first_name},{student.last_name},{student.course},{attendance.check_in_time}\n"
+        for attendance, student, course_name in attendance_data:
+            check_in_time_24hr = attendance.check_in_time.strftime(
+                "%Y-%m-%d %H:%M:%S")
+            yield f"{student.id},{student.first_name},{student.last_name},{course_name},{check_in_time_24hr}\n"
 
     return Response(generate(),
                     mimetype='text/csv',
                     headers={"Content-Disposition": "attachment;filename=attendance_data.csv"})
 
+
 def export_attendance_pdf(start_date):
-    attendance_data = db.session.query(Attendance, Student).join(Student).filter(Attendance.check_in_time >= start_date).all()
-    rendered_html = render_template("pdf_template.html",attendance_data=attendance_data,datetime=datetime)
+    attendance_data = db.session.query(Attendance, Student).join(
+        Student).filter(Attendance.check_in_time >= start_date).all()
+    rendered_html = render_template(
+        "pdf_template.html", attendance_data=attendance_data, datetime=datetime)
     pdf = HTML(string=rendered_html).write_pdf()
 
     return Response(pdf,
@@ -63,7 +88,8 @@ def login():
         student = Student.query.filter_by(id=student_id).first()
 
         if student:
-            new_attendance = Attendance(student_id=student.id, check_in_time=datetime.now())
+            new_attendance = Attendance(
+                student_id=student.id, check_in_time=datetime.now())
             db.session.add(new_attendance)
             student.is_logged_in = True
             db.session.commit()
@@ -71,10 +97,13 @@ def login():
             flash('No student ID number found. Please try again.')
     return render_template('login.html', student=student)
 
+
 @app.route('/admin', methods=['GET', 'POST'])
+@admin_required
 def admin_dashboard():
     if 'admin' in session:
-        filter_type = request.form.get('filter') if request.method == 'POST' else 'weekly'
+        filter_type = request.form.get(
+            'filter') if request.method == 'POST' else 'weekly'
         today = datetime.now()
 
         if filter_type == 'weekly':
@@ -87,10 +116,12 @@ def admin_dashboard():
         if request.method == 'POST' and 'export_csv' in request.form:
             return export_attendance_csv(start_date)
 
-        attendance_data = db.session.query(Attendance, Student).select_from(Attendance).join(Student, Attendance.student_id == Student.id).filter(Attendance.check_in_time >= start_date).all()
+        attendance_data = db.session.query(Attendance, Student).select_from(Attendance).join(
+            Student, Attendance.student_id == Student.id).filter(Attendance.check_in_time >= start_date).all()
 
         course_visits_raw = (
-            db.session.query(Student.course, db.func.count(Attendance.id).label('visits'))
+            db.session.query(Student.course, db.func.count(
+                Attendance.id).label('visits'))
             .select_from(Attendance)
             .join(Student, Attendance.student_id == Student.id)
             .filter(Attendance.check_in_time >= start_date)
@@ -98,11 +129,12 @@ def admin_dashboard():
             .all()
         )
 
-        course_mapping = {course.id: course.course_name for course in Course.query.all()}
+        course_mapping = {
+            course.id: course.course_name for course in Course.query.all()}
 
         course_visits = [
             {"course": course_mapping[course_id], "visits": visits}
-            for course_id, visits in course_visits_raw
+            for course_id, visits in course_visits_raw if course_id in course_mapping
         ]
 
         age_groups = {
@@ -125,7 +157,8 @@ def admin_dashboard():
                 age_groups['Above 50'] += 1
 
         place_visits_raw = (
-            db.session.query(Location.municipality, db.func.count(Attendance.id).label('visits'))
+            db.session.query(Location.municipality, db.func.count(
+                Attendance.id).label('visits'))
             .join(Student, Student.location_id == Location.id)
             .join(Attendance, Attendance.student_id == Student.id)
             .filter(Attendance.check_in_time >= start_date)
@@ -133,12 +166,14 @@ def admin_dashboard():
             .all()
         )
 
+        place_visits = [{"municipality": place, "visits": visits}
+                        for place, visits in place_visits_raw]
 
-        place_visits = [{"municipality": place, "visits": visits} for place, visits in place_visits_raw]
+        logged_in_users = db.session.query(Student, db.func.max(Attendance.check_in_time).label('login_time')).join(
+            Attendance, Student.id == Attendance.student_id).filter(Student.is_logged_in == True).group_by(Student.id).all()
 
-        logged_in_users = db.session.query(Student, db.func.max(Attendance.check_in_time).label('login_time')).join(Attendance, Student.id == Attendance.student_id).filter(Student.is_logged_in == True).group_by(Student.id).all()
-
-        total_visitors = db.session.query(Attendance.student_id).filter(Attendance.check_in_time >= start_date).distinct().count()
+        total_visitors = db.session.query(Attendance.student_id).filter(
+            Attendance.check_in_time >= start_date).distinct().count()
 
         course_visits_by_month = (
             db.session.query(
@@ -180,6 +215,7 @@ def admin_dashboard():
         flash('Unauthorized access! Admins only.')
         return redirect(url_for('admin_login'))
 
+
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
     if request.method == 'POST':
@@ -198,13 +234,16 @@ def admin_login():
 
     return render_template('admin_login.html')
 
+
 @app.route('/admin/logout')
 def admin_logout():
     session.pop('admin', None)
     flash('Logged out successfully!')
     return redirect(url_for('login'))
 
+
 @app.route('/admin/manage_students', methods=['GET', 'POST'])
+@admin_required
 def manage_students():
     if 'admin' in session:
         if request.method == 'POST':
@@ -230,7 +269,8 @@ def manage_students():
                 if student:
                     db.session.delete(student)
                     db.session.commit()
-                    flash(f'Student with ID {student_id} deleted successfully!')
+                    flash(
+                        f'Student with ID {student_id} deleted successfully!')
                 else:
                     flash('Student not found.')
 
@@ -242,7 +282,9 @@ def manage_students():
         flash('Unauthorized access!')
         return redirect(url_for('admin_login'))
 
+
 @app.route('/admin/edit_student/<int:student_id>', methods=['GET', 'POST'])
+@admin_required
 def edit_student(student_id):
     if 'admin' in session:
         student = Student.query.get_or_404(student_id)
@@ -269,7 +311,8 @@ def edit_student(student_id):
                 if 'image' in request.files and request.files['image'].filename != '':
                     image_file = request.files['image']
                     image_filename = secure_filename(image_file.filename)
-                    image_path = os.path.join(app.config['UPLOAD_FOLDER'], image_filename)
+                    image_path = os.path.join(
+                        app.config['UPLOAD_FOLDER'], image_filename)
                     image_file.save(image_path)
                     student.image = image_filename
 
@@ -285,7 +328,9 @@ def edit_student(student_id):
         flash('Unauthorized access!')
         return redirect(url_for('admin_login'))
 
+
 @app.route('/admin/add_student', methods=['GET', 'POST'])
+@admin_required
 def add_student():
     if 'admin' in session:
         if request.method == 'POST':
@@ -308,8 +353,8 @@ def add_student():
                 else:
                     filename = 'default_image.jpg'
 
-
-                location = Location(barangay=barangay, municipality=municipality, province=province)
+                location = Location(
+                    barangay=barangay, municipality=municipality, province=province)
                 db.session.add(location)
                 db.session.commit()
 
@@ -342,6 +387,7 @@ def add_student():
 
 
 @app.route('/admin/delete_student/<int:student_id>', methods=['DELETE'])
+@admin_required
 def delete_student(student_id):
     if 'admin' not in session:
         return jsonify({'success': False, 'message': 'Unauthorized access'}), 403
@@ -354,7 +400,9 @@ def delete_student(student_id):
     else:
         return jsonify({'success': False, 'message': 'Student not found'}), 404
 
+
 @app.route('/export/csv')
+@admin_required
 def export_csv():
     if 'admin' not in session:
         flash('Unauthorized access! Admins only.')
@@ -363,7 +411,9 @@ def export_csv():
     start_date = datetime.now() - timedelta(weeks=1)
     return export_attendance_csv(start_date)
 
+
 @app.route('/export/pdf')
+@admin_required
 def export_pdf():
     if 'admin' not in session:
         flash('Unauthorized access! Admins only.')
@@ -371,6 +421,32 @@ def export_pdf():
 
     start_date = datetime.now() - timedelta(weeks=1)
     return export_attendance_pdf(start_date)
+
+
+@app.route('/api/locations', methods=['GET'])
+@admin_required
+def get_locations():
+    province = request.args.get('province', '')
+    municipality = request.args.get('municipality', '')
+
+    filters = {}
+    if province:
+        filters['province'] = province
+    if municipality:
+        filters['municipality'] = municipality
+
+    locations = Location.query.filter_by(**filters).all()
+
+    location_data = [
+        {
+            'barangay': loc.barangay,
+            'municipality': loc.municipality,
+            'province': loc.province
+        }
+        for loc in locations
+    ]
+    return jsonify(location_data)
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
