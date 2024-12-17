@@ -65,16 +65,20 @@ def export_attendance_csv(start_date):
                     headers={"Content-Disposition": "attachment;filename=attendance_data.csv"})
 
 
-def export_attendance_pdf(start_date):
-        attendance_data = db.session.query(Attendance, Student, Course.course_name).join(
-            Student).join(Course).filter(Attendance.check_in_time >= start_date).all()
+    def export_attendance_pdf(start_date):
+        attendance_data = db.session.query(Attendance, Student, Course.course_name).\
+            select_from(Attendance).\
+            join(Student, Attendance.student_id == Student.id).\
+            join(Course, Student.course_id == Course.id).\
+            filter(Attendance.check_in_time >= start_date).all()
+
         rendered_html = render_template(
             "pdf_template.html", attendance_data=attendance_data, datetime=datetime)
         pdf = HTML(string=rendered_html).write_pdf()
 
         return Response(pdf,
                         mimetype='application/pdf',
-                        headers={"Content-Disposition": "attachment;filename=attendance_data.pdf"})
+                        headers={"Content-Disposition": "attachment;filename=pdf_template.pdf"})
 
 
 @app.route('/', methods=['GET', 'POST'])
