@@ -1,0 +1,54 @@
+{% include "base.html" %}
+{% block admin_login %}
+
+<div class="admin-login-container1">
+  <div class="admin-login-container2 thq-section-padding">
+    <div class="admin-login-max-width thq-section-padding thq-section-max-width">
+      <div class="admin-login-form-root">
+        <div class="admin-login-form1">
+          <h2 class="admin-login-text1 thq-heading-2">
+            <span>Library Admin Login</span>
+            <br />
+          </h2>
+
+          <form method="POST" action="{{ url_for('admin_login') }}" class="admin-login-form2">
+            <div class="admin-login-email">
+              <label for="thq-sign-in-1-password" class="thq-body-large">
+                Username
+              </label>
+              <input type="text" id="username" name="username" placeholder="Enter username"
+                class="admin-login-textinput1 thq-input thq-body-large" required />
+            </div>
+            <div class="admin-login-password">
+              <div class="admin-login-container3">
+                <label for="thq-sign-in-3-password" class="thq-body-large">
+                  Password
+                </label>
+              </div>
+              <input type="password" id="password" name="password" placeholder="Enter password"
+                class="admin-login-textinput2 thq-input thq-body-large" required />
+              <a href="mailto:kentedoloverio24@gmail.com?subject=Reset Password [ USTP Library ]"
+                class="admin-login-link thq-body-small">
+                Forgot password
+              </a>
+              {% with messages = get_flashed_messages() %}
+              {% if messages %}
+              <div class="alert alert-warning d-flex justify-content-center thq-section-max-width">
+                {{ messages[0] }}
+              </div>
+              {% endif %}
+              {% endwith %}
+            </div>
+            <div class="admin-login-container4">
+              <button type="submit" class="admin-login-button thq-button-filled">
+                <span class="thq-body-small">Login</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="admin-login-container5"></div>
+  </div>
+</div>
+{% endblock %}
