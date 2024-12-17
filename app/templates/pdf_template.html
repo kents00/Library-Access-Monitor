@@ -88,12 +88,12 @@
                 <th>Course</th>
                 <th>Check-in Time</th>
             </tr>
-            {% for attendance, student in attendance_data %}
+            {% for attendance, student, course_name in attendance_data %}
             <tr>
                 <td>{{ student.id }}</td>
                 <td>{{ student.first_name }}</td>
                 <td>{{ student.last_name }}</td>
-                <td>{{ student.course }}</td>
+                <td>{{ course_name }}</td>
                 <td>{{ attendance.check_in_time.strftime('%Y-%m-%d %H:%M:%S') }}</td>
             </tr>
             {% endfor %}
