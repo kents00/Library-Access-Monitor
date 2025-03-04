@@ -1,0 +1,44 @@
+{% include "admin/admin_base.html" %}
+{% block admin_home %}
+<div class="main-content">
+    <h2 class="my-4">Download Attendance Records</h2>
+    <form method="POST">
+        <div class="form-group">
+            <label for="filter">Filter by:</label>
+            <select class="form-control" id="filter" name="filter">
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+                <option value="custom">Custom</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="course">Course:</label>
+            <select class="form-control" id="course" name="course">
+                <option value="">All Courses</option>
+                {% for course in courses %}
+                <option value="{{ course.id }}">{{ course.course_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="start_date">Start Date:</label>
+            <input type="date" class="form-control" id="start_date" name="start_date">
+        </div>
+        <div class="form-group">
+            <label for="end_date">End Date:</label>
+            <input type="date" class="form-control" id="end_date" name="end_date">
+        </div>
+        <div class="form-group">
+            <label for="start_time">Start Time:</label>
+            <input type="time" class="form-control" id="start_time" name="start_time">
+        </div>
+        <div class="form-group">
+            <label for="end_time">End Time:</label>
+            <input type="time" class="form-control" id="end_time" name="end_time">
+        </div>
+        <button type="submit" name="export_csv" class="btn btn-secondary">Export as CSV</button>
+        <button type="submit" name="export_pdf" class="btn btn-secondary">Export as PDF</button>
+    </form>
+</div>
+{% endblock %}

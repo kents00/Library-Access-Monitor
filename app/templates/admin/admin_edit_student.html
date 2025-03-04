@@ -1,0 +1,141 @@
+{% include "admin/admin_base.html" %}
+{% block edit_students %}
+<div class="container form-container">
+    <h1 class="form-heading">Edit User Information</h1>
+
+    <form method="POST" action="/admin/edit_student/{{ student.id }}" enctype="multipart/form-data">
+        <!-- First Name -->
+        <div class="mb-3">
+            <label for="firstName" class="form-label">First Name</label>
+            <input type="text" class="form-control" id="firstName" name="firstName" value="{{ student.first_name }}"
+                required>
+        </div>
+
+        <!-- Middle Name -->
+        <div class="mb-3">
+            <label for="middleName" class="form-label">Middle Name [ Optional ]</label>
+            <input type="text" class="form-control" id="middleName" name="middleName" value="{{ student.middle_name }}">
+        </div>
+
+        <!-- Last Name -->
+        <div class="mb-3">
+            <label for="lastName" class="form-label">Last Name</label>
+            <input type="text" class="form-control" id="lastName" name="lastName" value="{{ student.last_name }}"
+                required>
+        </div>
+
+        <!-- Course -->
+        <div class="mb-3">
+            <label for="course" class="form-label">Course</label>
+            <select class="form-control" id="course" name="course" required>
+                <option value="" disabled>Select a course</option>
+                {% for course in courses %}
+                <option value="{{ course.id }}" {% if student.course_id == course.id %}selected{% endif %}>
+                    {{ course.course_name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Age -->
+        <div class="mb-3">
+            <label for="age" class="form-label">Age</label>
+            <input type="number" class="form-control" id="age" name="age" value="{{ student.age }}" required>
+        </div>
+
+        <!-- Barangay -->
+        <div class="mb-3">
+            <label for="barangay" class="form-label">Barangay</label>
+            <input type="text" class="form-control" id="Barangay" name="Barangay" list="barangay-list"
+                value="{{ student.location.barangay }}" required autocomplete="off"
+                onkeyup="fetchLocations('Barangay')">
+            <datalist id="barangay-list"></datalist>
+        </div>
+
+        <!-- Municipality -->
+        <div class="mb-3">
+            <label for="municipality" class="form-label">Municipality</label>
+            <input type="text" class="form-control" id="Municipality" name="Municipality" list="municipality-list"
+                value="{{ student.location.municipality }}" required autocomplete="off"
+                onkeyup="fetchLocations('Municipality')">
+            <datalist id="municipality-list"></datalist>
+        </div>
+
+        <!-- Province -->
+        <div class="mb-3">
+            <label for="Province" class="form-label">Province</label>
+            <input type="text" class="form-control" id="Province" name="Province" list="province-list"
+                value="{{ student.location.province }}" required autocomplete="off"
+                onkeyup="fetchLocations('Province')">
+            <datalist id="province-list"></datalist>
+        </div>
+
+        <!-- File Upload (Image) -->
+        <div class="mb-3">
+            <label for="fileUpload" class="form-label">Upload Image</label>
+            <div class="input-group">
+                <input type="file" class="form-control" id="fileUpload" name="image">
+            </div>
+            {% if student.image %}
+            <small>Current Image: {{ student.image }}</small>
+            {% endif %}
+        </div>
+
+        <div class="d-flex justify-content-end">
+            <button type="submit" class="btn btn-submit me-2">Submit</button>
+            <a href="/admin/manage_students" class="btn btn-cancel">Cancel</a>
+        </div>
+    </form>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flashes">
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} mt-3" role="alert">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+</div>
+
+<script>
+    function fetchLocations(field) {
+        const province = document.getElementById('Province').value;
+        const municipality = document.getElementById('Municipality').value;
+
+        fetch(`/api/locations?province=${province}&municipality=${municipality}`)
+            .then(response => response.json())
+            .then(data => {
+                let datalistId = '';
+                if (field === 'Barangay') {
+                    datalistId = 'barangay-list';
+                } else if (field === 'Municipality') {
+                    datalistId = 'municipality-list';
+                } else if (field === 'Province') {
+                    datalistId = 'province-list';
+                }
+                const datalist = document.getElementById(datalistId);
+                datalist.innerHTML = '';
+
+                data.forEach(location => {
+                    if (field === 'Barangay') {
+                        let option = document.createElement('option');
+                        option.value = location.barangay;
+                        datalist.appendChild(option);
+                    } else if (field === 'Municipality') {
+                        let option = document.createElement('option');
+                        option.value = location.municipality;
+                        datalist.appendChild(option);
+                    } else if (field === 'Province') {
+                        let option = document.createElement('option');
+                        option.value = location.province;
+                        datalist.appendChild(option);
+                    }
+                });
+            })
+            .catch(error => console.error('Error fetching locations:', error));
+    }
+</script>
+{% endblock %}

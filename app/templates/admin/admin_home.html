@@ -1,0 +1,182 @@
+{% include "admin/admin_base.html" %}
+{% block admin_home %}
+        <!-- Main Content -->
+        <div class="main-content">
+            <h2 class="my-4">Library Access Monitor Dashboard</h2>
+
+            <div class="row">
+                <!-- Cards with icons -->
+
+                <!-- Most Visited Course -->
+                <div class="col-md-4 small-card">
+                    <i class="fas fa-book icon"></i>
+                    {% if course_visits %}
+                    {% set most_visited_course = course_visits[0] %}
+                    {% for visit in course_visits %}
+                    {% if visit.visits > most_visited_course.visits %}
+                    {% set most_visited_course = visit %}
+                    {% endif %}
+                    {% endfor %}
+                    <h4>{{ most_visited_course.course }}</h4>
+                    {% else %}
+                    <h4>No course visit data available.</h4>
+                    {% endif %}
+                    <p>Visited Library by Course</p>
+                </div>
+
+                <!-- Most Populated Age Group -->
+                <div class="col-md-4 small-card">
+                    <i class="fas fa-user icon"></i>
+                    {% set has_visits = false %}
+
+                    {% for age_group, visits in age_groups.items() %}
+                    {% if visits > 0 %}
+                    <h4>{{ age_group }}</h4>
+                    {% set has_visits = true %}
+                    {% endif %}
+                    {% endfor %}
+
+                    <p>Age Groups of Visitors</p>
+                </div>
+
+                <!-- Most Visited Place of Residence -->
+                <div class="col-md-4 small-card">
+                    <i class="fas fa-map-marker-alt icon"></i>
+                    {% if place_visits %}
+                    {% set most_visited_place = place_visits[0] %}
+                    {% for place in place_visits %}
+                    {% if place.visits > most_visited_place.visits %}
+                    {% set most_visited_place = place %}
+                    {% endif %}
+                    {% endfor %}
+                    <h4>{{ most_visited_place.municipality }}</h4>
+                    {% else %}
+                    <h4>No place visit data available.</h4>
+                    {% endif %}
+                    <p>Visits by Place of Residence</p>
+                </div>
+            </div>
+
+
+            <!-- Main Section -->
+            <div class="row mt-4">
+                <!-- Graph -->
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">Visitor Statistics (by Month)</div>
+                        <div class="card-body chart">
+                            <canvas id="visitorChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <!-- Total Visitors Filter by Week, Month, Year -->
+                <div class="col-md-4">
+                    <div class="card" style="height: 100%;">
+                        <div class="card-header">Total Visitors Filter</div>
+                        <div class="card-body text-center">
+                            <h1 class="visitor" id="visitor-count">{{ total_visitors }}</h1>
+                            <p>Total Students who Log-in in Library</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Users Section -->
+            <div class="table-container">
+                <div class="card">
+                    <div class="card-header">
+                        Current Logged-in Users
+                        <input type="text" id="userSearch" class="form-control search-input" placeholder="Search by name or ID...">
+                    </div>
+                    <div class="card-body scrollable-table">
+                        <table class="table table-striped" id="userTable">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Course</th>
+                                    <th>Login Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for student, login_time in logged_in_users %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td>{{student.id}}</td>
+                                    <td>{{ student.first_name }} {{ student.last_name }}</td>
+                                    <td>{{ student.course.course_name }}</td>
+                                    <td>{{ login_time.strftime('%I:%M %p') }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center">No users currently logged in.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    <script>
+        // Pass the Flask data to JavaScript
+        const courseData = {{ course_visits | tojson }};
+        const ageGroupData = {{ age_groups | tojson }};
+        const placeData = {{ place_visits | tojson }};
+
+
+        // Search functionality for name and ID
+        document.getElementById('userSearch').addEventListener('input', function () {
+            const searchValue = this.value.toLowerCase();
+            const rows = document.querySelectorAll('#userTable tbody tr');
+
+            rows.forEach(row => {
+                const id = row.cells[1].textContent.toLowerCase();
+                const name = row.cells[2].textContent.toLowerCase();
+                if (id.includes(searchValue) || name.includes(searchValue)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+
+        const visitorChart = document.getElementById('visitorChart').getContext('2d');
+        const chart = new Chart(visitorChart, {
+            type: 'bar',
+            data: {
+                labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+                datasets: [
+                    {
+                        label: 'Information Technology',
+                        data: {{ monthly_course_visits['Information Technology']| tojson }},
+                        backgroundColor: '#6C63FF',
+                    },
+                    {
+                        label: 'Marine Biology',
+                        data: {{ monthly_course_visits['Marine Biology']| tojson }},
+                        backgroundColor: '#4FD1C5',
+                    },
+                    {
+                        label: 'Education',
+                        data: {{ monthly_course_visits['Education'] | tojson }},
+                        backgroundColor: '#F6AD55',
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+
+    {% endblock %}
