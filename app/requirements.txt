@@ -4,3 +4,4 @@ Werkzeug
 WeasyPrint
 waitress
 python-dotenv
+matplotlib

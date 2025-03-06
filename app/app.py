@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file
 from models import db, Student, Attendance, User, Location, Course
 from flask import Response, render_template, jsonify
 from werkzeug.security import check_password_hash
@@ -9,6 +9,9 @@ from functools import wraps
 from weasyprint import HTML
 import os
 import csv
+import json
+import matplotlib.pyplot as plt
+import io
 
 app = Flask(__name__)
 
@@ -206,25 +209,61 @@ def admin_dashboard():
         monthly_course_visits = {
             'Information Technology': [0] * 12,
             'Marine Biology': [0] * 12,
-            'Education': [0] * 12
+            'Home Economics': [0] * 12,
+            'Industrial Arts': [0] * 12,
         }
 
         for course, month, visits in course_visits_by_month:
             if course in monthly_course_visits:
                 monthly_course_visits[course][month - 1] = visits
 
+        weekly_course_visits = {
+            'Information Technology': [0] * 7,
+            'Marine Biology': [0] * 7,
+            'Home Economics': [0] * 7,
+            'Industrial Arts': [0] * 7,
+        }
+
+        course_visits_by_week = (
+            db.session.query(
+                Course.course_name,
+                extract('dow', Attendance.check_in_time).label('day_of_week'),
+                db.func.count(Attendance.id).label('visits')
+            )
+            .select_from(Student)
+            .join(Course, Student.course_id == Course.id)
+            .join(Attendance, Attendance.student_id == Student.id)
+            .filter(Attendance.check_in_time >= start_date)
+            .group_by(Course.course_name, extract('dow', Attendance.check_in_time))
+            .all()
+        )
+
+        for course, day_of_week, visits in course_visits_by_week:
+            if course in weekly_course_visits:
+                weekly_course_visits[course][day_of_week] = visits
+
+        print(f"Weekly Course Visits: {weekly_course_visits}")
+
         print(f"Course Visits: {course_visits}")
         print(f"Age Groups: {age_groups}")
         print(f"Place Visits: {place_visits}")
         print(f"Monthly Course Visits: {monthly_course_visits}")
 
-        return render_template('admin/admin_home.html',
+        # Ensure no None or Undefined values in weekly_course_visits
+        for course in weekly_course_visits:
+            weekly_course_visits[course] = [0 if v is None else v for v in weekly_course_visits[course]]
+
+        # Ensure no None or Undefined values in course_mapping
+        course_mapping = {k: (v if v is not None else "") for k, v in course_mapping.items()}
+
+        return render_template('admin_new/ae_dashboard.html',
                                course_visits=course_visits,
                                age_groups=age_groups,
                                place_visits=place_visits,
                                total_visitors=total_visitors,
                                logged_in_users=logged_in_users,
-                               monthly_course_visits=monthly_course_visits)
+                               monthly_course_visits=monthly_course_visits,
+                               weekly_course_visits=weekly_course_visits)
     else:
         flash('Unauthorized access! Admins only.')
         return redirect(url_for('admin_login'))
@@ -504,6 +543,30 @@ def get_locations():
         for loc in locations
     ]
     return jsonify(location_data)
+
+
+@app.route('/download_graph')
+@admin_required
+def download_graph():
+    weekly_course_visits = json.loads(request.args.get('weekly_course_visits'))
+
+    fig, ax = plt.subplots()
+    categories = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+
+    for course, data in weekly_course_visits.items():
+        ax.plot(categories, data, label=course)
+
+    ax.set_xlabel('Day of the Week')
+    ax.set_ylabel('Visits')
+    ax.set_title('Weekly Course Visits')
+    ax.legend()
+
+    img = io.BytesIO()
+    plt.savefig(img, format='png')
+    img.seek(0)
+    plt.close(fig)
+
+    return send_file(img, mimetype='image/png', as_attachment=True, download_name='visitor_statistics.png')
 
 
 if __name__ == "__main__":

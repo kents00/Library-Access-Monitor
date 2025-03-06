@@ -4,9 +4,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Spike Free Bootstrap Admin Template by WrapPixel</title>
-  <link rel="shortcut icon" type="image/png" href="../assets/images/logos/favicon.png" />
-  <link rel="stylesheet" href="../assets/css/styles.min.css" />
+  <title>Admin Dashboard</title>
+  <link rel="shortcut icon" type="image/png"
+    href="{{ url_for('static', filename='assets/images/logos/favicon.png') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='assets/css/styles.min.css') }}" />
 </head>
 
 <body>
@@ -19,8 +20,8 @@
       <!-- Sidebar scroll-->
       <div>
         <div class="brand-logo d-flex align-items-center justify-content-between">
-          <a href="./index.html" class="text-nowrap logo-img">
-            <img src="../assets/images/logos/logo.svg" alt="" />
+          <a href="/admin" class="text-nowrap logo-img">
+            <img src="{{ url_for('static', filename='assets/images/logos/logo.svg') }}" alt="" />
           </a>
           <div class="close-btn d-xl-none d-block sidebartoggler cursor-pointer" id="sidebarCollapse">
             <i class="ti ti-x fs-8"></i>
@@ -34,25 +35,24 @@
               <span class="hide-menu">Home</span>
             </li>
             <li class="sidebar-item">
-              <a class="sidebar-link primary-hover-bg" href="./index.html" aria-expanded="false">
+              <a class="sidebar-link primary-hover-bg" href="/admin" aria-expanded="false">
                 <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
                 <span class="hide-menu">Dashboard</span>
               </a>
             </li>
             <li class="sidebar-item">
               <a class="sidebar-link primary-hover-bg justify-content-between" target="_blank"
-                href="https://bootstrapdemos.wrappixel.com/materialM/dist/landingpage/index.html" aria-expanded="false">
+                href="/admin/manage_students" aria-expanded="false">
                 <div class="d-flex align-items-center gap-6">
                   <span class="d-flex">
-                    <iconify-icon icon="solar:passport-line-duotone" class=""></iconify-icon>
+                    <iconify-icon icon="solar:passport-line-duotone"></iconify-icon>
                   </span>
                   <span class="hide-menu">Manage Students</span>
                 </div>
               </a>
             </li>
             <li class="sidebar-item">
-              <a class="sidebar-link primary-hover-bg justify-content-between" target="_blank"
-                href="https://bootstrapdemos.wrappixel.com/spike/dist/main/page-user-profile.html"
+              <a class="sidebar-link primary-hover-bg justify-content-between" target="_blank" href="/admin/user"
                 aria-expanded="false">
                 <div class="d-flex align-items-center gap-6">
                   <span class="d-flex">
@@ -64,7 +64,7 @@
             </li>
             <li class="sidebar-item">
               <a class="sidebar-link primary-hover-bg justify-content-between" target="_blank"
-                href="https://bootstrapdemos.wrappixel.com/spike/dist/main/app-invoice.html" aria-expanded="false">
+                href="/admin/download_records" aria-expanded="false">
                 <div class="d-flex align-items-center gap-6">
                   <span class="d-flex">
                     <iconify-icon icon="solar:bill-list-line-duotone" class=""></iconify-icon>
@@ -74,7 +74,7 @@
               </a>
             </li>
             <li class="sidebar-item">
-              <a class="sidebar-link primary-hover-bg" href="./authentication-login.html" aria-expanded="false">
+              <a class="sidebar-link primary-hover-bg" href="/admin/logout" aria-expanded="false">
                 <iconify-icon icon="solar:login-3-line-duotone"></iconify-icon>
                 <span class="hide-menu">Logout</span>
               </a>
@@ -107,8 +107,8 @@
                   <li class="nav-item dropdown">
                     <a class="nav-link " href="javascript:void(0)" id="drop2" data-bs-toggle="dropdown"
                       aria-expanded="false">
-                      <img src="../assets/images/profile/user1.jpg" alt="" width="35" height="35"
-                        class="rounded-circle">
+                      <img src="{{ url_for('static', filename='assets/images/profile/user1.jpg') }}" alt="" width="35"
+                        height="35" class="rounded-circle">
                     </a>
                     <div class="dropdown-menu dropdown-menu-end dropdown-menu-animate-up" aria-labelledby="drop2">
                       <div class="message-body">
@@ -126,21 +126,27 @@
             </nav>
           </header>
           <!--  Header End -->
-          <div class="card">
-            <div class="card-body">
-              <h5 class="card-title fw-semibold mb-4">Sample Page</h5>
-              <p class="mb-0">This is a sample page </p>
-            </div>
-          </div>
+
+          {% block admin_home %}
+          {% endblock %}
+
+          {% block manage_students %}
+          {% endblock %}
+
+          {% block edit_students %}
+          {% endblock %}
+
         </div>
       </div>
     </div>
   </div>
-  <script src="../assets/libs/jquery/dist/jquery.min.js"></script>
-  <script src="../assets/libs/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="../assets/js/sidebarmenu.js"></script>
-  <script src="../assets/js/app.min.js"></script>
-  <script src="../assets/libs/simplebar/dist/simplebar.js"></script>
+  <script src="{{ url_for('static', filename='assets/libs/jquery/dist/jquery.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='assets/libs/bootstrap/dist/js/bootstrap.bundle.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='assets/js/sidebarmenu.js') }}"></script>
+  <script src="{{ url_for('static', filename='assets/js/app.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='assets/libs/apexcharts/dist/apexcharts.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='assets/libs/simplebar/dist/simplebar.js') }}"></script>
+  <script src="{{ url_for('static', filename='assets/js/dashboard.js') }}"></script>
   <!-- solar icons -->
   <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js"></script>
 </body>

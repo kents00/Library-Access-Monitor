@@ -1,18 +1,26 @@
 $(function () {
-
-
   // =====================================
-  // Profit
+  // visitorstat
   // =====================================
-  var profit = {
+  var weekly_course_visits = JSON.parse(document.getElementById('weekly_course_visits').textContent);
+
+  var visitorstat = {
     series: [
       {
-        name: "Pixel ",
-        data: [9, 5, 3, 7, 5, 10, 3],
+        name: "Information Technology",
+        data: weekly_course_visits['Information Technology'],
       },
       {
-        name: "Ample ",
-        data: [6, 3, 9, 5, 4, 6, 4],
+        name: "Marine Biology",
+        data: weekly_course_visits['Marine Biology'],
+      },
+      {
+        name: "Home Economics",
+        data: weekly_course_visits['Home Economics'],
+      },
+      {
+        name: "Industrial Arts",
+        data: weekly_course_visits['Industrial Arts'],
       },
     ],
     chart: {
@@ -29,7 +37,7 @@ $(function () {
       strokeDashArray: 3,
       borderColor: "rgba(0,0,0,.1)",
     },
-    colors: ["#1e88e5", "#21c1d6"],
+    colors: ["#1e88e5", "#21c1d6", "#ffb22b", "#ff5722"],
     plotOptions: {
       bar: {
         horizontal: false,
@@ -47,7 +55,7 @@ $(function () {
     },
     xaxis: {
       type: "category",
-      categories: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+      categories: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
       axisTicks: {
         show: false,
       },
@@ -69,7 +77,7 @@ $(function () {
     },
     fill: {
       opacity: 1,
-      colors: ["var(--bs-primary)", "var(--bs-danger)"],
+      colors: ["var(--bs-primary)", "var(--bs-danger)", "var(--bs-warning)", "var(--bs-info)"],
     },
     tooltip: {
       theme: "dark",
@@ -92,11 +100,10 @@ $(function () {
   };
 
   var chart_column_basic = new ApexCharts(
-    document.querySelector("#profit"),
-    profit
+    document.querySelector("#visitorstat"),
+    visitorstat
   );
   chart_column_basic.render();
-
 
   // =====================================
   // Breakup
@@ -163,9 +170,6 @@ $(function () {
 
   var chart = new ApexCharts(document.querySelector("#grade"), grade);
   chart.render();
-
-
-
 
   // =====================================
   // Earning
