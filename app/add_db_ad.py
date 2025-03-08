@@ -1,6 +1,8 @@
 from werkzeug.security import generate_password_hash
-from app import app, db  # Import your Flask app and db instance
+from app import create_app, db  # Use the factory function to create the app instance
 from models import User
+
+app = create_app()
 
 # Create an application context
 with app.app_context():

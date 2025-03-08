@@ -52,8 +52,8 @@
               </a>
             </li>
             <li class="sidebar-item">
-              <a class="sidebar-link primary-hover-bg justify-content-between" target="_blank" href="/admin/user"
-                aria-expanded="false">
+              <a class="sidebar-link primary-hover-bg justify-content-between" target="_blank"
+                href="/admin/manage_admins" aria-expanded="false">
                 <div class="d-flex align-items-center gap-6">
                   <span class="d-flex">
                     <iconify-icon icon="solar:shield-user-line-duotone" class=""></iconify-icon>
@@ -103,24 +103,7 @@
               </ul>
               <div class="navbar-collapse justify-content-end px-0" id="navbarNav">
                 <ul class="navbar-nav flex-row ms-auto align-items-center justify-content-end">
-                  <a href="#" target="_blank" class="btn btn-primary">Download Records</a>
-                  <li class="nav-item dropdown">
-                    <a class="nav-link " href="javascript:void(0)" id="drop2" data-bs-toggle="dropdown"
-                      aria-expanded="false">
-                      <img src="{{ url_for('static', filename='assets/images/profile/user1.jpg') }}" alt="" width="35"
-                        height="35" class="rounded-circle">
-                    </a>
-                    <div class="dropdown-menu dropdown-menu-end dropdown-menu-animate-up" aria-labelledby="drop2">
-                      <div class="message-body">
-                        <a href="javascript:void(0)" class="d-flex align-items-center gap-2 dropdown-item">
-                          <i class="ti ti-user fs-6"></i>
-                          <p class="mb-0 fs-3">My Profile</p>
-                        </a>
-                        <a href="./authentication-login.html"
-                          class="btn btn-outline-primary mx-3 mt-2 d-block">Logout</a>
-                      </div>
-                    </div>
-                  </li>
+                  <a href="admin/download_records" target="_blank" class="btn btn-primary">Download Records</a>
                 </ul>
               </div>
             </nav>
@@ -128,12 +111,6 @@
           <!--  Header End -->
 
           {% block admin_home %}
-          {% endblock %}
-
-          {% block manage_students %}
-          {% endblock %}
-
-          {% block edit_students %}
           {% endblock %}
 
         </div>

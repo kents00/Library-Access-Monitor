@@ -53,3 +53,4 @@ class User(db.Model):
     username = db.Column(db.String(50), nullable=False, unique=True)
     password = db.Column(db.String(200), nullable=False)
     role = db.Column(db.String(10), nullable=False)
+    image = db.Column(db.String(200), nullable=True)  # Add image column
