@@ -5,3 +5,4 @@ WeasyPrint
 waitress
 python-dotenv
 matplotlib
+Flask-Migrate
