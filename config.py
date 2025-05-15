@@ -8,5 +8,4 @@ class Config:
     SQLALCHEMY_DATABASE_URI = f'sqlite:///{os.path.join(BASE_DIR, "library.db")}'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = True
-    # Add explicit upload folder configuration
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
