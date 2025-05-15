@@ -11,3 +11,4 @@ app/.env
 __pycache__
 admin_template
 .env
+ignore
