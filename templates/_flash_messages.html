@@ -1,0 +1,21 @@
+<!-- Flash Messages Component -->
+<!-- Include this file in your templates to add standardized flash message handling -->
+
+<!-- Hidden container for flash messages -->
+<div id="flash-messages-container" style="display:none;">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+    <div class="flash-message" data-category="{{ category }}">{{ message }}</div>
+    {% endfor %}
+    {% endwith %}
+</div>
+
+<!-- Hidden input for backend error messages -->
+<input type="hidden" id="backend-error" value="{{ error|default('') }}">
+
+<!-- Include the Notiflix library and our custom handler -->
+{% if not notiflix_already_included %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notiflix@3.2.6/dist/notiflix-3.2.6.min.css">
+<script src="https://cdn.jsdelivr.net/npm/notiflix@3.2.6/dist/notiflix-aio-3.2.6.min.js"></script>
+<script src="{{ url_for('static', filename='js/flash-messages.js') }}"></script>
+{% endif %}

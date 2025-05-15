@@ -1,0 +1,252 @@
+{% include "base.html" %}
+{% block home %}
+<div class="bg-gradient-to-br from-blue-900 to-indigo-800 min-h-screen flex flex-col items-center justify-center p-4">
+  <div class="max-w-4xl w-full bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
+
+    <!-- Left panel - USTP Branding -->
+    <div
+      class="bg-gradient-to-br from-blue-800 to-indigo-900 p-8 flex flex-col items-center md:items-start justify-center md:w-1/2 text-white">
+      <div class="flex flex-col md:flex-row items-center mb-8">
+        <div class="relative p-3 rounded-full mb-4 md:mb-0 md:mr-6">
+
+          <img alt="USTP Logo" src="{{ url_for('static', filename='images/ustp-logo.png') }}"
+            class="w-28 h-28 md:w-36 md:h-36 object-contain animate__animated animate__fadeIn relative z-10 logo-highlight" />
+          <div class="absolute inset-0 rounded-full animate__animated animate__pulse animate__infinite z-0">
+          </div>
+        </div>
+        <div class="text-center md:text-left">
+          <h1 class="text-2xl md:text-3xl font-bold text-white tracking-tight">
+            Library Access Monitor
+          </h1>
+          <span class="text-blue-200 text-sm italic">
+            Developed by Kent Edoloverio
+          </span>
+        </div>
+      </div>
+
+      <div class="hidden md:block">
+        <h3 class="text-xl font-semibold text-white mb-4">Welcome to the USTP Library</h3>
+        <p class="text-blue-100 mb-6">
+          Access resources, track your visits, and enhance your learning experience.
+        </p>
+        <div class="flex items-center text-white space-x-2 bg-blue-700 bg-opacity-50 p-3 rounded-lg">
+          <i data-feather="book-open" class="w-5 h-5"></i>
+          <span>Discover. Learn. Grow.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right panel - Login Form -->
+    <div class="p-8 md:w-1/2 flex flex-col justify-center">
+      <h2 class="text-2xl font-bold text-gray-700 mb-6">Sign In</h2>
+
+      <form method="POST" action="/" id="loginForm" class="space-y-6">
+        <div class="relative">
+          <label for="id" class="text-sm font-medium text-gray-600 mb-1 block">Student ID</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <i data-feather="user" class="h-5 w-5 text-gray-400"></i>
+            </div>
+            <input type="text" name="id" id="id" required autofocus placeholder="Enter your student ID"
+              class="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" />
+          </div>
+        </div>
+
+        <button type="submit" id="submitBtn"
+          class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2">
+          <span>Log In</span>
+          <i data-feather="log-in" class="h-5 w-5"></i>
+        </button>
+      </form>
+
+      {% with messages = get_flashed_messages() %}
+      {% if messages %}
+      <div
+        class="mt-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded animate__animated animate__fadeIn"
+        role="alert">
+        <p>{{ messages[0] }}</p>
+      </div>
+      {% endif %}
+      {% endwith %}
+    </div>
+  </div>
+
+  <!-- Add a hidden input to indicate student presence -->
+  <input type="hidden" id="studentExists" value="{{ 'true' if student else 'false' }}">
+
+  <!-- Convert Student Information Card to a popup modal -->
+  {% if student %}
+  <!-- Modal/popup backdrop -->
+  <div id="studentModal"
+    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate__animated animate__fadeIn hidden">
+    <div
+      class="max-w-3xl w-full mx-4 bg-white rounded-xl shadow-lg overflow-hidden animate__animated animate__fadeInUp">
+      <div class="relative">
+        <!-- Success banner - updated color scheme -->
+        <div class="bg-gradient-to-r from-indigo-700 to-blue-700 text-white py-3 px-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-xl font-bold">Welcome to USTP Library!</h2>
+              <p class="text-indigo-100 text-sm">Your attendance has been successfully recorded</p>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span class="bg-green-500 text-white text-xs uppercase tracking-wider py-1 px-2 rounded-full">
+                <i data-feather="check-circle" class="inline h-3 w-3 mr-1"></i>Logged In
+              </span>
+              <button id="closeModalBtn" class="text-white hover:text-indigo-200 transition-colors">
+                <i data-feather="x" class="h-5 w-5"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Student information - more compact layout -->
+        <div class="p-4">
+          <div class="flex flex-col md:flex-row">
+            <!-- Student photo section - more compact -->
+            <div class="md:w-1/4 flex flex-col items-center mb-4 md:mb-0">
+              <div class="w-28 h-28 rounded-full border-3 border-indigo-100 shadow-md overflow-hidden">
+                <img src="{{ url_for('static', filename='uploads/' + student['image']) }}"
+                  alt="{{ student['first_name'] }}'s Photo" class="w-full h-full object-cover" />
+              </div>
+              <div class="bg-indigo-50 rounded-lg mt-2 py-1 px-3 text-center w-full">
+                <p class="text-xs text-indigo-700 font-medium">Student ID</p>
+                <p class="text-base font-bold text-indigo-900">{{ student['id'] }}</p>
+              </div>
+            </div>
+
+            <!-- Student details section - more compact -->
+            <div class="md:w-3/4 md:pl-5 md:border-l md:border-indigo-100">
+              <h3 class="text-xl font-bold text-gray-800 mb-0.5">
+                {{ student['first_name'] }} {{ student['last_name'] }}
+              </h3>
+              <p class="text-gray-500 text-sm mb-3">
+                {% if student['middle_name'] %}{{ student['middle_name'] }}{% endif %}
+              </p>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+                <!-- Course info - updated colors -->
+                <div class="bg-indigo-50 rounded-lg p-2">
+                  <div class="flex items-center">
+                    <div class="bg-indigo-100 rounded p-1.5 mr-2">
+                      <i data-feather="book" class="h-4 w-4 text-indigo-600"></i>
+                    </div>
+                    <div>
+                      <p class="text-xs text-indigo-600 uppercase font-medium">Program</p>
+                      <p class="text-sm font-medium">{{ student['course']['course_name'] }}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Time info - updated colors -->
+                <div class="bg-indigo-50 rounded-lg p-2">
+                  <div class="flex items-center">
+                    <div class="bg-blue-100 rounded p-1.5 mr-2">
+                      <i data-feather="clock" class="h-4 w-4 text-blue-600"></i>
+                    </div>
+                    <div>
+                      <p class="text-xs text-indigo-600 uppercase font-medium">Check-in Time</p>
+                      <p class="text-sm font-medium">{{ now.strftime('%I:%M %p') }}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Location info (if available) - updated colors -->
+                {% if student.get('location') %}
+                <div class="bg-indigo-50 rounded-lg p-2">
+                  <div class="flex items-center">
+                    <div class="bg-indigo-100 rounded p-1.5 mr-2">
+                      <i data-feather="map-pin" class="h-4 w-4 text-indigo-600"></i>
+                    </div>
+                    <div>
+                      <p class="text-xs text-indigo-600 uppercase font-medium">Location</p>
+                      <p class="text-sm font-medium">{{ student['location']['municipality'] }}</p>
+                    </div>
+                  </div>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer note - more compact -->
+          <div class="mt-3 pt-2 border-t border-indigo-100 text-center">
+            <div class="flex items-center justify-center text-xs text-gray-500">
+              <i data-feather="info" class="h-3.5 w-3.5 mr-1.5 text-indigo-500"></i>
+              <p>Your attendance has been recorded. Thank you for visiting the library!</p>
+            </div>
+            <p class="text-xs text-gray-400 mt-1">{{ now.strftime('%A, %B %d, %Y') }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Footer -->
+  <div class="mt-10 text-center text-white text-sm opacity-70">
+    &copy; {{ now.year }} University of Science and Technology of Southern Philippines. All rights reserved.
+  </div>
+</div>
+
+<script>
+  // Add loading state to submit button
+  document.getElementById('loginForm').addEventListener('submit', function () {
+    const button = document.getElementById('submitBtn');
+    button.disabled = true;
+    button.innerHTML = `
+      <svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      Processing...
+    `;
+  });
+
+  // Student modal popup functionality - template-tag-free version
+  document.addEventListener('DOMContentLoaded', function () {
+    const studentExists = document.getElementById('studentExists').value === 'true';
+    const modal = document.getElementById('studentModal');
+
+    // Only proceed if student exists and modal is found
+    if (studentExists && modal) {
+      const closeBtn = document.getElementById('closeModalBtn');
+      let timer;
+
+      // Function to hide modal
+      function hideModal() {
+        modal.classList.add('animate__fadeOut');
+        setTimeout(() => {
+          modal.classList.add('hidden');
+          modal.classList.remove('animate__fadeOut');
+        }, 500);
+        clearTimeout(timer);
+
+        // Remove event listeners when modal is hidden
+        document.removeEventListener('keydown', hideModal);
+        document.removeEventListener('click', hideModal);
+      }
+
+      // Show modal after a brief delay to ensure page is loaded
+      setTimeout(() => {
+        modal.classList.remove('hidden');
+
+        // Set timer to hide modal after 20 seconds
+        timer = setTimeout(hideModal, 20000);
+
+        // Add event listeners to hide modal on key press or mouse click
+        document.addEventListener('keydown', hideModal);
+        document.addEventListener('click', hideModal);
+
+        // Add click event for close button
+        if (closeBtn) {
+          closeBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            hideModal();
+          });
+        }
+      }, 500);
+    }
+  });
+</script>
+{% endblock %}
