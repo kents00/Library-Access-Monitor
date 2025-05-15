@@ -1,0 +1,47 @@
+{% extends "admin_new/ae_base.html" %}
+{% block admin_home %}
+<!--  Header End -->
+<div class="card">
+  <div class="card-body">
+    <h5 class="card-title fw-semibold mb-4">Download Attendance Records</h5>
+    <form method="POST">
+      <div class="form-group mb-3">
+        <label for="filter" class="form-label">Filter by:</label>
+        <select class="form-control" id="filter" name="filter">
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+          <option value="yearly">Yearly</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+      <div class="form-group mb-3">
+        <label for="course" class="form-label">Course:</label>
+        <select class="form-control" id="course" name="course">
+          <option value="">All Courses</option>
+          {% for course in courses %}
+          <option value="{{ course.id }}">{{ course.course_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group mb-3">
+        <label for="start_date" class="form-label">Start Date:</label>
+        <input type="date" class="form-control" id="start_date" name="start_date">
+      </div>
+      <div class="form-group mb-3">
+        <label for="end_date" class="form-label">End Date:</label>
+        <input type="date" class="form-control" id="end_date" name="end_date">
+      </div>
+      <div class="form-group mb-3">
+        <label for="start_time" class="form-label">Start Time:</label>
+        <input type="time" class="form-control" id="start_time" name="start_time">
+      </div>
+      <div class="form-group mb-3">
+        <label for="end_time" class="form-label">End Time:</label>
+        <input type="time" class="form-control" id="end_time" name="end_time">
+      </div>
+      <button type="submit" name="export_csv" class="btn btn-primary m-1">Export as CSV</button>
+      <button type="submit" name="export_pdf" class="btn btn-secondary m-1">Export as PDF</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
