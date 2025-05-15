@@ -11,7 +11,7 @@
         <div class="col-md-4 text-center">
           {% set profile_image = admin.image if admin and admin.image else 'default_image.jpg' %}
           <img id="profileImagePreview" src="{{ url_for('static', filename='uploads/' ~ profile_image) }}"
-            alt="Profile Image" class="rounded-circle" style="width: 20rem; height: 20rem; object-fit: cover;">
+            alt="Profile Image" class="rounded-circle" style="width: 15rem; height: 15rem; object-fit: cover;">
         </div>
         <div class="col-md-8">
           <div class="form-group mb-3">

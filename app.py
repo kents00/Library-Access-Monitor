@@ -1,11 +1,14 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from werkzeug.security import check_password_hash, generate_password_hash
 import datetime
-import json  # Add missing import for JSON parsing
+import json
 from config import Config
 from models import db
 # Import export functions
 from utils.export import export_attendance_csv, export_attendance_pdf
+
+# Import the backup function at the top of the file
+from utils.backup import backup_deleted_records
 
 # Create Flask app and configure
 app = Flask(__name__)
@@ -335,6 +338,9 @@ def delete_student(student_id):
     try:
         student = Student.query.get(student_id)
         if student:
+            # Create backup before deletion
+            backup_deleted_records('Student', [student])
+
             db.session.delete(student)
             db.session.commit()
             return jsonify({'success': True, 'message': f'Student {student_id} deleted successfully'}), 200

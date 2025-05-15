@@ -5,6 +5,8 @@ from models.student import Student
 from models.course import Course
 from weasyprint import HTML
 import datetime  # Import datetime module
+import csv
+import io
 
 def export_attendance_csv(start_date, end_date=None, course_id=None):
     query = db.session.query(Attendance, Student, Course.course_name).\
@@ -55,3 +57,54 @@ def export_attendance_pdf(start_date, end_date=None, course_id=None):
     return Response(pdf,
                   mimetype='application/pdf',
                   headers={"Content-Disposition": "attachment;filename=attendance_data.pdf"})
+
+def export_model_to_csv(model_data, filename=None):
+    """
+    Generic function to export any model data to CSV.
+
+    Args:
+        model_data: List of model instances or dictionaries
+        filename: Optional filename for the CSV
+
+    Returns:
+        Response object with CSV data
+    """
+    if not model_data:
+        return Response("No data to export", mimetype='text/plain')
+
+    if not filename:
+        filename = f"data_export_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+
+    # Determine columns from the first record
+    if hasattr(model_data[0], '__table__'):
+        columns = [column.name for column in model_data[0].__table__.columns]
+    else:
+        columns = model_data[0].keys()
+
+    def generate():
+        # Create a StringIO object
+        output = io.StringIO()
+        writer = csv.writer(output)
+
+        # Write header
+        writer.writerow(columns)
+
+        # Yield the header
+        yield output.getvalue()
+        output.seek(0)
+        output.truncate(0)
+
+        # Write each row
+        for item in model_data:
+            if hasattr(item, '__dict__'):
+                row = [getattr(item, column) for column in columns]
+            else:
+                row = [item.get(column) for column in columns]
+            writer.writerow(row)
+            yield output.getvalue()
+            output.seek(0)
+            output.truncate(0)
+
+    return Response(generate(),
+                   mimetype='text/csv',
+                   headers={"Content-Disposition": f"attachment;filename={filename}"})

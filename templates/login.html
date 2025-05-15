@@ -1,8 +1,15 @@
 {% include "base.html" %}
 {% block home %}
-<div class="bg-gradient-to-br from-blue-900 to-indigo-800 min-h-screen flex flex-col items-center justify-center p-4">
-  <div class="max-w-4xl w-full bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
+<div class="min-h-screen flex flex-col items-center justify-center p-4 relative">
+  <!-- Background image with overlay -->
+  <div class="absolute inset-0 z-0">
+    <img src="{{ url_for('static', filename='images/preview-1500w.png') }}" alt="USTP Building"
+      class="w-full h-full object-cover" />
+    <div class="absolute inset-0 bg-gradient-to-br from-blue-900 to-indigo-800 opacity-80"></div>
+  </div>
 
+  <!-- Content container -->
+  <div class="max-w-4xl w-full bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row z-10 relative">
     <!-- Left panel - USTP Branding -->
     <div
       class="bg-gradient-to-br from-blue-800 to-indigo-900 p-8 flex flex-col items-center md:items-start justify-center md:w-1/2 text-white">
@@ -37,7 +44,13 @@
     </div>
 
     <!-- Right panel - Login Form -->
-    <div class="p-8 md:w-1/2 flex flex-col justify-center">
+    <div class="p-8 md:w-1/2 flex flex-col justify-center relative">
+      <!-- Help button -->
+      <button id="helpBtn"
+        class="absolute top-4 right-4 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-full w-8 h-8 flex items-center justify-center transition-all duration-200">
+        <i data-feather="help-circle" class="h-5 w-5"></i>
+      </button>
+
       <h2 class="text-2xl font-bold text-gray-700 mb-6">Sign In</h2>
 
       <form method="POST" action="/" id="loginForm" class="space-y-6">
@@ -183,8 +196,95 @@
   </div>
   {% endif %}
 
+  <!-- Help Modal -->
+  <div id="helpModal"
+    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate__animated animate__fadeIn hidden">
+    <div
+      class="max-w-3xl w-full mx-4 bg-white rounded-xl shadow-lg overflow-hidden animate__animated animate__fadeInUp">
+      <div class="relative">
+        <!-- Help Header -->
+        <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 px-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center">
+              <i data-feather="help-circle" class="h-5 w-5 mr-2"></i>
+              <h2 class="text-xl font-bold">How to Use Library Access Monitor</h2>
+            </div>
+            <button id="closeHelpBtn" class="text-white hover:text-blue-200 transition-colors">
+              <i data-feather="x" class="h-5 w-5"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Help Content -->
+        <div class="p-6 overflow-y-auto max-h-[70vh]">
+          <div class="space-y-6">
+            <!-- Step 1 -->
+            <div class="flex items-start">
+              <div class="bg-blue-100 rounded-full p-3 mr-4 flex-shrink-0">
+                <i data-feather="user" class="h-6 w-6 text-blue-600"></i>
+              </div>
+              <div>
+                <h3 class="text-lg font-semibold text-gray-800">Step 1: Enter Your Student ID</h3>
+                <p class="text-gray-600 mt-1">Type your student ID in the input field provided. This is required to log
+                  your library access.</p>
+              </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="flex items-start">
+              <div class="bg-blue-100 rounded-full p-3 mr-4 flex-shrink-0">
+                <i data-feather="log-in" class="h-6 w-6 text-blue-600"></i>
+              </div>
+              <div>
+                <h3 class="text-lg font-semibold text-gray-800">Step 2: Click Login</h3>
+                <p class="text-gray-600 mt-1">Click the "Log In" button to submit your attendance. The system will
+                  process your entry.</p>
+              </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="flex items-start">
+              <div class="bg-blue-100 rounded-full p-3 mr-4 flex-shrink-0">
+                <i data-feather="check-circle" class="h-6 w-6 text-blue-600"></i>
+              </div>
+              <div>
+                <h3 class="text-lg font-semibold text-gray-800">Step 3: Confirmation</h3>
+                <p class="text-gray-600 mt-1">A confirmation popup will appear showing your details and confirming your
+                  library access has been recorded.</p>
+              </div>
+            </div>
+
+            <!-- Additional Information -->
+            <div class="mt-6 pt-4 border-t border-gray-200">
+              <div class="flex items-start">
+                <div class="bg-yellow-100 rounded-full p-3 mr-4 flex-shrink-0">
+                  <i data-feather="info" class="h-6 w-6 text-yellow-600"></i>
+                </div>
+                <div>
+                  <h3 class="text-lg font-semibold text-gray-800">Additional Information</h3>
+                  <ul class="list-disc ml-5 mt-2 space-y-1 text-gray-600">
+                    <li>Your attendance is automatically timestamped</li>
+                    <li>If you encounter any issues, please contact the library staff</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="bg-gray-50 px-4 py-3 text-center border-t">
+          <button id="closeHelpBtnFooter"
+            class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-all duration-200">
+            Got it!
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Footer -->
-  <div class="mt-10 text-center text-white text-sm opacity-70">
+  <div class="mt-10 text-center text-white text-sm opacity-70 z-10 relative">
     &copy; {{ now.year }} University of Science and Technology of Southern Philippines. All rights reserved.
   </div>
 </div>
@@ -246,6 +346,54 @@
           });
         }
       }, 500);
+    }
+  });
+
+  // Help modal functionality
+  document.addEventListener('DOMContentLoaded', function () {
+    const helpBtn = document.getElementById('helpBtn');
+    const helpModal = document.getElementById('helpModal');
+    const closeHelpBtn = document.getElementById('closeHelpBtn');
+    const closeHelpBtnFooter = document.getElementById('closeHelpBtnFooter');
+
+    // Function to show help modal
+    function showHelpModal() {
+      helpModal.classList.remove('hidden');
+      // Stop event propagation
+      event.stopPropagation();
+    }
+
+    // Function to hide help modal
+    function hideHelpModal() {
+      helpModal.classList.add('animate__fadeOut');
+      setTimeout(() => {
+        helpModal.classList.add('hidden');
+        helpModal.classList.remove('animate__fadeOut');
+      }, 500);
+    }
+
+    // Add event listeners
+    if (helpBtn) helpBtn.addEventListener('click', showHelpModal);
+    if (closeHelpBtn) closeHelpBtn.addEventListener('click', hideHelpModal);
+    if (closeHelpBtnFooter) closeHelpBtnFooter.addEventListener('click', hideHelpModal);
+
+    // Close modal when clicking outside the content
+    helpModal.addEventListener('click', function (event) {
+      if (event.target === helpModal) {
+        hideHelpModal();
+      }
+    });
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && !helpModal.classList.contains('hidden')) {
+        hideHelpModal();
+      }
+    });
+
+    // Initialize Feather Icons after DOM loaded
+    if (typeof feather !== 'undefined') {
+      feather.replace();
     }
   });
 </script>

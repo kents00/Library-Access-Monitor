@@ -10,7 +10,7 @@ A web-based library attendance system built with Flask, designed to streamline s
 - **Admin Dashboard**: An interactive dashboard for library staff to view daily attendance counts, peak hours, and other useful metrics.
 - **User Roles**: Separate roles for regular users (students) and admin users.
 - **Data Export**: Attendance data export options in CSV and PDF formats.
-- **Backup System**: Integrated backup mechanism for SQLite database.
+- **Comprehensive Backup System**: Automatic backup of deleted records in both CSV and SQLite formats.
 - **Analytics**: View attendance by course, age group, and residence.
 
 ## Project Structure
@@ -21,46 +21,48 @@ A web-based library attendance system built with Flask, designed to streamline s
     - **Student**: Stores details like ID, name, course, age, and place of residence.
     - **Attendance**: Tracks check-in times with student IDs.
     - **User**: Stores user credentials, including roles.
+- **Utils**:
+    - **backup.py**: Handles automatic backup of deleted records
+    - **export.py**: Manages data export functionality
+    - **ensure_dirs.py**: Ensures all required directories exist
 
 ## Installation
 
 1. **Clone the Repository**:
-    
+
     ```bash
     git clone <https://github.com/kents00/Library-Attendance.git>
     cd Library-Attendance
     ```
-    
+
 2. **Set Up Virtual Environment**:
-    
+
     ```bash
     python -m venv venv
     source venv/bin/activate   # On Windows use `venv\\Scripts\\activate`
     ```
-    
+
 3. **Install Dependencies**:
-    
+
     ```bash
     pip install -r requirements.txt
     ```
-    
+
 4. **Set Up Database**:
 Run the following commands to initialize the SQLite database and apply migrations.
-    
+
     ```bash
-    flask db init
-    flask db migrate
-    flask db upgrade
+    python init_db.py
     ```
-    
+
 5. **Run the Application**:
-    
+
     ```bash
-    flask run or  python app.py
+    flask run
     ```
-    
+
     Access the app at [http://localhost:5000](http://localhost:5000/).
-    
+
 
 ## Usage
 
@@ -72,7 +74,43 @@ Run the following commands to initialize the SQLite database and apply migration
 
 ## Database Backup
 
-- A built-in backup mechanism supports secure backup and restoration of the SQLite database.
+The system includes a robust backup mechanism with the following features:
+- **Automatic Backups**: When records are deleted, the system automatically creates backups.
+- **Dual-Format Backup**: Each backup is stored in both CSV and SQLite formats for flexibility.
+- **Timestamped Files**: Backup files include timestamps to differentiate between backup operations.
+- **Backup Location**: All backups are stored in the `utils/backups` directory.
+
+## Docker Deployment
+
+### Docker Hub
+
+The easiest way to deploy the application is using Docker Hub:
+
+```bash
+# Pull the image from Docker Hub
+docker pull kents00/library-access-monitor:latest
+
+# Run the container
+docker run -d -p 5000:5000 --name library-access-monitor kents00/library-access-monitor:latest
+
+# Stop the container
+docker stop library-access-monitor
+
+# Remove the container
+docker rm library-access-monitor
+```
+
+### Local Docker Build
+
+Alternatively, you can build and run using the project's Docker files:
+
+```bash
+# Build and start the container
+docker-compose up -d
+
+# To stop the container
+docker-compose down
+```
 
 ## Contributions
 

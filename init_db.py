@@ -43,14 +43,14 @@ def init_database(app=None):
             db.session.add_all(courses)
             db.session.commit()  # Commit to generate course IDs
 
-        # Create locations for student records
+        # Create locations for student records with better dummy names
         locations = [
-            Location(id=1, barangay="Brgy 1", municipality="Municipality 1", province="Province 1"),
-            Location(id=2, barangay="Brgy 2", municipality="Municipality 2", province="Province 2"),
-            Location(id=3, barangay="Brgy 3", municipality="Municipality 3", province="Province 3"),
-            Location(id=4, barangay="Brgy 4", municipality="Municipality 4", province="Province 4"),
-            Location(id=5, barangay="Brgy 5", municipality="Municipality 5", province="Province 5"),
-            Location(id=6, barangay="Brgy 6", municipality="Municipality 6", province="Province 6"),
+            Location(id=1, barangay="East District", municipality="Central City", province="North Province"),
+            Location(id=2, barangay="West District", municipality="Harbor Town", province="South Province"),
+            Location(id=3, barangay="North District", municipality="Mountain View", province="East Province"),
+            Location(id=4, barangay="South District", municipality="Valley City", province="West Province"),
+            Location(id=5, barangay="Downtown", municipality="Metro City", province="Central Province"),
+            Location(id=6, barangay="Uptown", municipality="Urban City", province="Coastal Province"),
         ]
         for location in locations:
             # Check if location already exists
@@ -60,50 +60,50 @@ def init_database(app=None):
 
         db.session.commit()  # Commit to generate location IDs
 
-        # Add student data
+        # Add student data with dummy information
         students_data = [
             {
-                "id": "2023301341",
-                "first_name": "Euri",
-                "middle_name": "Acope",
-                "last_name": "Buladaco",
+                "id": "2023100001",
+                "first_name": "John",
+                "middle_name": "Michael",
+                "last_name": "Doe",
                 "age": 20,
                 "location_id": 4,
                 "course_id": 3,
-                "image": "Euri.jpg",
+                "image": "default_image.jpg",
                 "is_logged_in": 1
             },
             {
-                "id": "2023301346",
-                "first_name": "Liedyl",
-                "middle_name": "Albino",
-                "last_name": "Castillo",
+                "id": "2023100002",
+                "first_name": "Jane",
+                "middle_name": "Alice",
+                "last_name": "Smith",
                 "age": 20,
                 "location_id": 2,
                 "course_id": 2,
-                "image": "Liedyl.jpg",
+                "image": "default_image.jpg",
                 "is_logged_in": 1
             },
             {
-                "id": "2023301393",
-                "first_name": "Ma.Daisy Mae",
-                "middle_name": "Luzon",
-                "last_name": "Redera",
+                "id": "2023100003",
+                "first_name": "Robert",
+                "middle_name": "Thomas",
+                "last_name": "Johnson",
                 "age": 20,
                 "location_id": 5,
                 "course_id": 4,
-                "image": "Redera.jpg",
+                "image": "default_image.jpg",
                 "is_logged_in": 1
             },
             {
-                "id": "2023304655",
-                "first_name": "Kent John",
-                "middle_name": "Mahinay",
-                "last_name": "Edoloverio",
+                "id": "2023100004",
+                "first_name": "Emily",
+                "middle_name": "Grace",
+                "last_name": "Brown",
                 "age": 20,
                 "location_id": 6,
                 "course_id": 1,
-                "image": "Kent.jpg",
+                "image": "default_image.jpg",
                 "is_logged_in": 1
             }
         ]
