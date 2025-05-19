@@ -572,8 +572,8 @@ def download_graph():
 @admin_required
 def manage_admins():
     if 'admin' in session:
-        admin_id = request.form.get('adminId')
         if request.method == 'POST':
+            admin_id = request.form.get('adminId')
             username = request.form.get('username')
             password = request.form.get('password')
             confirm_password = request.form.get('confirm_password')
