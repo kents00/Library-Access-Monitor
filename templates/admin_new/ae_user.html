@@ -1,0 +1,52 @@
+{% extends "admin_new/ae_base.html" %}
+{% block admin_home %}
+<!--  Header End -->
+<!-- Content Start -->
+<div class="card">
+  <div class="card-body">
+    <h5 class="card-title fw-semibold mb-4">User Registration</h5>
+    <form method="POST" enctype="multipart/form-data">
+      <input type="hidden" id="adminId" name="adminId" value="{{ admin.id if admin else '' }}">
+      <div class="row">
+        <div class="col-md-4 text-center">
+          {% set profile_image = admin.image if admin and admin.image else 'default_image.jpg' %}
+          <img id="profileImagePreview" src="{{ url_for('static', filename='uploads/' ~ profile_image) }}"
+            alt="Profile Image" class="rounded-circle" style="width: 15rem; height: 15rem; object-fit: cover;">
+        </div>
+        <div class="col-md-8">
+          <div class="form-group mb-3">
+            <label for="username" class="form-label">Username:</label>
+            <input type="text" class="form-control" id="username" name="username"
+              value="{{ admin.username if admin else '' }}" required>
+          </div>
+          <div class="form-group mb-3">
+            <label for="password" class="form-label">Password:</label>
+            <input type="password" class="form-control" id="password" name="password" required>
+          </div>
+          <div class="form-group mb-3">
+            <label for="confirm_password" class="form-label">Confirm Password:</label>
+            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+          </div>
+          <div class="form-group mb-3">
+            <label for="profile_image" class="form-label">Profile Image:</label>
+            <input type="file" class="form-control" id="profile_image" name="profile_image" accept="image/*"
+              onchange="previewImage(event)">
+          </div>
+          <button type="submit" class="btn btn-primary m-1">{{ 'Update' if admin else 'Register' }}</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function previewImage(event) {
+    const reader = new FileReader();
+    reader.onload = function () {
+      const output = document.getElementById('profileImagePreview');
+      output.src = reader.result;
+    };
+    reader.readAsDataURL(event.target.files[0]);
+  }
+</script>
+{% endblock %}

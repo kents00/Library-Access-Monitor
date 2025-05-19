@@ -1,0 +1,84 @@
+{% extends "admin_new/ae_base.html" %}
+{% block admin_home %}
+<!-- Content Start -->
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title fw-semibold mb-4">Add Student Information</h5>
+        <form method="POST" action="/admin/add_student" enctype="multipart/form-data">
+            <div class="row">
+                <div class="col-md-4 text-center">
+                    <img id="profileImagePreview"
+                        src="{{ url_for('static', filename='uploads/' ~ (student.image or 'default_image.jpg')) }}"
+                        alt="Profile Image" class="rounded-circle"
+                        style="width: 20rem; height: 20rem; object-fit: cover;">
+                </div>
+                <div class="col-md-8">
+                    <div class="form-group mb-3">
+                        <label for="studentId" class="form-label">Student ID:</label>
+                        <input type="text" class="form-control" id="studentId" name="studentId" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="firstName" class="form-label">First Name:</label>
+                        <input type="text" class="form-control" id="firstName" name="firstName" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="middleName" class="form-label">Middle Name [Optional]:</label>
+                        <input type="text" class="form-control" id="middleName" name="middleName">
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="lastName" class="form-label">Last Name:</label>
+                        <input type="text" class="form-control" id="lastName" name="lastName" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="course" class="form-label">Course:</label>
+                        <select class="form-control" id="course" name="course" required>
+                            <option value="" disabled>Select a course</option>
+                            {% for course in courses %}
+                            <option value="{{ course.id }}" {% if student.course_id==course.id %}selected{% endif %}>
+                                {{ course.course_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="age" class="form-label">Age:</label>
+                        <input type="number" class="form-control" id="age" name="age" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="Barangay" class="form-label">Barangay:</label>
+                        <input type="text" class="form-control" id="Barangay" name="Barangay" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="Municipality" class="form-label">Municipality:</label>
+                        <input type="text" class="form-control" id="Municipality" name="Municipality" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="Province" class="form-label">Province:</label>
+                        <input type="text" class="form-control" id="Province" name="Province" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="image" class="form-label">Upload Image:</label>
+                        <input type="file" class="form-control" id="image" name="image" accept="image/*"
+                            onchange="previewImage(event)">
+                    </div>
+                    <button type="submit" class="btn btn-primary m-1">Submit</button>
+                    <button type="button" class="btn btn-secondary m-1"
+                        onclick="window.location.href='/admin/manage_students'">Cancel</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<!-- Content End -->
+
+<script>
+    function previewImage(event) {
+        var reader = new FileReader();
+        reader.onload = function () {
+            var output = document.getElementById('profileImagePreview');
+            output.src = reader.result;
+        };
+        reader.readAsDataURL(event.target.files[0]);
+    }
+</script>
+{% endblock %}

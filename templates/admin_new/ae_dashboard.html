@@ -1,0 +1,677 @@
+{% extends "admin_new/ae_base.html" %}
+{% block admin_home %}
+<!--  Page Content Start -->
+<div class="row">
+  <!-- Visitor Statistics -->
+  <div class="col-lg-8 d-flex align-items-strech">
+    <div class="card w-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between mb-1">
+          <div class="">
+            <h5 class="card-title fw-semibold">Visitor Statistics</h5>
+          </div>
+          <div class="dropdown d-flex">
+            <div class="refresh-control me-2">
+              <button id="refreshChartBtn" class="btn btn-sm btn-outline-secondary" title="Refresh now">
+                <i class="ti ti-refresh"></i>
+              </button>
+            </div>
+            <button id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false"
+              class="rounded-circle btn-transparent rounded-circle btn-sm px-1 btn shadow-none">
+              <i class="ti ti-dots-vertical fs-7 d-block"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton1">
+              <!-- Time range filter buttons inside dropdown menu -->
+              <li><span class="dropdown-item-text fw-semibold">Time Range</span></li>
+              <li><a class="dropdown-item dashboard-filter-item active" href="#" data-filter="weekly">
+                  <i class="ti ti-calendar-week me-1"></i> Weekly
+                </a></li>
+              <li><a class="dropdown-item dashboard-filter-item" href="#" data-filter="monthly">
+                  <i class="ti ti-calendar-month me-1"></i> Monthly
+                </a></li>
+              <li><a class="dropdown-item dashboard-filter-item" href="#" data-filter="yearly">
+                  <i class="ti ti-calendar me-1"></i> Yearly
+                </a></li>
+              <li><a class="dropdown-item dashboard-filter-item" href="#" data-filter="custom" id="customDateRangeBtn">
+                  <i class="ti ti-calendar-plus me-1"></i> Custom...
+                </a></li>
+              <li>
+                <hr class="dropdown-divider">
+              </li>
+              <!-- Download options -->
+              <li><span class="dropdown-item-text fw-semibold">Download</span></li>
+              <li>
+                <a class="dropdown-item" id="downloadGraphLink" href="{{ url_for('graph.download_graph') }}">
+                  <i class="ti ti-download me-1"></i> Download Graph
+                </a>
+              </li>
+              <li>
+                <a class="dropdown-item" id="downloadMonthlyGraphLink" href="#"
+                  onclick="downloadMonthlyGraph(); return false;">
+                  <i class="ti ti-calendar-stats me-1"></i> Download Monthly View
+                </a>
+              </li>
+              <li>
+                <a class="dropdown-item" id="downloadSummaryLink" href="#" onclick="downloadSummary(); return false;">
+                  <i class="ti ti-report-analytics me-1"></i> Download Summary
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div id="visitorstat"></div>
+        <!-- Ensure proper JSON formatting for the hidden input -->
+        <input type="hidden" id="weekly_course_visits_data" value='{{ weekly_course_visits|tojson }}'>
+
+        <!-- Custom date range picker (hidden by default) -->
+        <div class="date-range-container mt-3" style="display: none;">
+          <div class="card">
+            <div class="card-body">
+              <h6 class="card-subtitle mb-2 text-muted">Custom Date Range</h6>
+              <div class="row g-2">
+                <div class="col-md-5">
+                  <div class="form-floating">
+                    <input type="date" class="form-control" id="startDate">
+                    <label for="startDate">Start Date</label>
+                  </div>
+                </div>
+                <div class="col-md-5">
+                  <div class="form-floating">
+                    <input type="date" class="form-control" id="endDate">
+                    <label for="endDate">End Date</label>
+                  </div>
+                </div>
+                <div class="col-md-2 d-flex align-items-center">
+                  <button type="button" id="applyDateRange" class="btn btn-primary w-100">Apply</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Visitors Place Residence -->
+  <div class="col-lg-4">
+    <div class="row">
+      <div class="col-lg-12 col-sm-6">
+        <!-- Yearly Breakup -->
+        <div class="card overflow-hidden">
+          <div class="card-body p-4">
+            <h5 class="card-title mb-10 fw-semibold">Visits by Place of Residence</h5>
+            <div class="row align-items-center">
+              <div class="col-7">
+                {% if top_weekly_places and top_weekly_places|length > 0 %}
+                <h4 class="fw-semibold mb-3">{{ top_weekly_places[0]['municipality'] }}</h4>
+                <div class="d-flex align-items-center mb-2">
+                  <span
+                    class="me-1 rounded-circle {{ top_weekly_place_visits_bg_class }} round-20 d-flex align-items-center justify-content-center">
+                    <i class="ti {{ top_weekly_place_visits_icon_class }}"></i>
+                  </span>
+                  <p class="text-dark me-1 fs-3 mb-0">+{{ top_weekly_places[0]['visits'] }}%</p>
+                  <p class="fs-3 mb-0">this month</p>
+                </div>
+                <div class="d-flex align-items-center">
+                  <div class="me-3">
+                    <span class="round-8 bg-primary rounded-circle me-2 d-inline-block"></span>
+                    <span class="fs-2">{{ top_weekly_places[0]['municipality'] }}</span>
+                  </div>
+                  {% if top_weekly_places|length > 1 %}
+                  <div>
+                    <span class="round-8 bg-danger rounded-circle me-2 d-inline-block"></span>
+                    <span class="fs-2">{{ top_weekly_places[1]['municipality'] }}</span>
+                  </div>
+                  {% endif %}
+                </div>
+                {% else %}
+                <p class="text-center">No Data Available</p>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-12 col-sm-6">
+        <!-- Monthly Earnings -->
+        <div class="card">
+          <div class="card-body">
+            <div class="row alig n-items-start">
+              <div class="col-8">
+                <h5 class="card-title mb-10 fw-semibold">Total Log-in Library</h5>
+                <h4 class="fw-semibold mb-3">{{ total_logins_month }}</h4>
+                <div class="d-flex align-items-center pb-1">
+                  <span
+                    class="me-2 rounded-circle {{ login_bg_class }} round-20 d-flex align-items-center justify-content-center">
+                    <i class="ti {{ login_icon_class }}"></i>
+                  </span>
+                  <p class="text-dark me-1 fs-3 mb-0">{{ login_percentage_increase }}%</p>
+                  <p class="fs-3 mb-0">this month</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="earning"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-lg-12 d-flex align-items-stretch">
+    <div class="card w-100">
+      <div class="card-body p-4">
+        <div class="d-flex mb-4 justify-content-between align-items-center">
+          <h5 class="mb-0 fw-bold">Recently Logged-in</h5>
+
+          <div class="d-flex">
+            <button id="refreshTableBtn" class="btn btn-sm btn-outline-secondary me-2" title="Refresh now">
+              <i class="ti ti-refresh"></i>
+            </button>
+            <div class="dropdown">
+              <button id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false"
+                class="rounded-circle btn-transparent rounded-circle btn-sm px-1 btn shadow-none">
+                <i class="ti ti-dots-vertical fs-7 d-block"></i>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton1">
+                <li><a class="dropdown-item" href="{{ url_for('manage_students') }}">Manage Students</a></li>
+                <li>
+                  <a class="dropdown-item" href="{{ url_for('download_records') }}">Download Records</a>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="mb-3">
+          <input type="text" class="form-control" id="searchInput" placeholder="Search by name, ID, or course">
+        </div>
+
+        <div class="table-responsive" data-simplebar style="max-height: 400px;">
+          <table class="table table-borderless align-middle text-nowrap" id="studentTable">
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">ID</th>
+                <th scope="col">Course</th>
+                <th scope="col">Login Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if logged_in_users and logged_in_users|length > 0 %}
+              {% for student, login_time in logged_in_users %}
+              <tr>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <div class="me-4">
+                      <img src="{{ url_for('static', filename='uploads/' ~ (student.image or 'default.png')) }}"
+                        width="50" class="rounded-circle" alt="" />
+                    </div>
+                    <div>
+                      <h6 class="mb-1 fw-bolder">{{ student.first_name }} {{ student.last_name }}</h6>
+                      <p class="fs-3 mb-0">Student</p>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <p class="fs-3 fw-normal mb-0">{{ student.id }}</p>
+                </td>
+                <td>
+                  <p class="fs-3 fw-normal mb-0">{{ student.course.course_name if student.course else 'N/A' }}</p>
+                </td>
+                <td>
+                  <span class="badge bg-light-success rounded-pill text-success px-3 py-2 fs-3">{{
+                    login_time.strftime('%I:%M %p') if login_time else 'N/A' }}</span>
+                </td>
+              </tr>
+              {% endfor %}
+              {% else %}
+              <tr>
+                <td colspan="4" class="text-center">No Data Available</td>
+              </tr>
+              {% endif %}
+              <tr id="noUsersFound" style="display: none;">
+                <td colspan="4" class="text-center">No student found.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Current active filter indicator -->
+<div class="d-flex justify-content-end mb-3 mt-3">
+  <div class="badge bg-light-primary text-primary p-2" id="currentFilterDisplay">
+    <i class="ti ti-calendar me-1"></i> Showing: <span id="activeFilterName">Weekly</span> data
+  </div>
+</div>
+
+<!-- Add this at the end of the file to initialize the chart -->
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Initialize search functionality
+    document.getElementById('searchInput').addEventListener('input', function () {
+      const searchTerm = this.value.toLowerCase();
+      const rows = document.querySelectorAll('#studentTable tbody tr:not(#noUsersFound)');
+      let visibleCount = 0;
+
+      rows.forEach(function (row) {
+        if (row.textContent.toLowerCase().includes(searchTerm)) {
+          row.style.display = '';
+          visibleCount++;
+        } else {
+          row.style.display = 'none';
+        }
+      });
+
+      document.getElementById('noUsersFound').style.display = visibleCount > 0 ? 'none' : '';
+    });
+
+    // Initialize visitor statistics chart
+    try {
+      const chartDataElement = document.getElementById('weekly_course_visits_data');
+      if (chartDataElement) {
+        // Debug: log the raw value to see what we're working with
+        console.log('Raw chart data value:', chartDataElement.value);
+
+        let chartData;
+        try {
+          // Handle potential HTML escaping issues
+          let jsonString = chartDataElement.value.trim();
+
+          // Replace HTML entities if needed
+          if (jsonString.includes('&quot;') || jsonString.includes('&#39;')) {
+            jsonString = jsonString
+              .replace(/&quot;/g, '"')
+              .replace(/&#39;/g, "'")
+              .replace(/&amp;/g, '&');
+          }
+
+          // Parse the sanitized JSON string
+          chartData = JSON.parse(jsonString);
+          console.log('Parsed chart data successfully');
+        } catch (parseError) {
+          console.error('JSON parse error:', parseError);
+          // Provide fallback data
+          chartData = {
+            'Information Technology': [0, 0, 0, 0, 0, 0, 0],
+            'Marine Biology': [0, 0, 0, 0, 0, 0, 0],
+            'Home Economics and Industrial Arts': [0, 0, 0, 0, 0, 0, 0],
+            'Technology and Livelihood Education': [0, 0, 0, 0, 0, 0, 0]
+          };
+          console.log('Using fallback chart data');
+        }
+
+        // Initialize ApexCharts with daily data
+        const options = {
+          series: Object.entries(chartData).map(([name, data]) => ({
+            name: name,
+            data: data
+          })),
+          chart: {
+            height: 350,
+            type: 'line',
+            toolbar: {
+              show: false,
+            }
+          },
+          colors: ['#0d6efd', '#2ab57d', '#fd7e14', '#ff5c8e'],
+          dataLabels: {
+            enabled: false,
+          },
+          stroke: {
+            curve: 'smooth',
+            width: 3,
+          },
+          grid: {
+            borderColor: 'rgba(0,0,0,0.1)',
+            strokeDashArray: 3,
+          },
+          markers: {
+            size: 3,
+            colors: ['#0d6efd', '#2ab57d', '#fd7e14', '#ff5c8e'],
+            strokeColors: '#ffffff',
+            strokeWidth: 2,
+            hover: {
+              size: 7,
+            }
+          },
+          xaxis: {
+            categories: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+            title: {
+              text: 'Day of Week'
+            }
+          },
+          yaxis: {
+            title: {
+              text: 'Number of Visitors'
+            },
+          },
+          legend: {
+            position: 'top',
+            horizontalAlign: 'right',
+          }
+        };
+
+        const chart = new ApexCharts(document.querySelector("#visitorstat"), options);
+        chart.render();
+      } else {
+        console.error('Chart data element not found');
+      }
+    } catch (err) {
+      console.error('Error rendering chart:', err);
+      document.getElementById('visitorstat').innerHTML = '<div class="alert alert-danger">Error rendering chart</div>';
+    }
+
+    // Manual refresh button for chart
+    const refreshChartBtn = document.getElementById('refreshChartBtn');
+    if (refreshChartBtn) {
+      refreshChartBtn.addEventListener('click', function () {
+        this.disabled = true;
+        this.innerHTML = '<i class="ti ti-loader ti-spin"></i>';
+
+        // Trigger data refresh
+        fetchDashboardData();
+
+        // Re-enable button after 1 second
+        setTimeout(() => {
+          this.disabled = false;
+          this.innerHTML = '<i class="ti ti-refresh"></i>';
+        }, 1000);
+      });
+    }
+
+    // Manual refresh button for table
+    const refreshTableBtn = document.getElementById('refreshTableBtn');
+    if (refreshTableBtn) {
+      refreshTableBtn.addEventListener('click', function () {
+        this.disabled = true;
+        this.innerHTML = '<i class="ti ti-loader ti-spin"></i>';
+
+        // Trigger data refresh
+        fetchDashboardData();
+
+        // Re-enable button after 1 second
+        setTimeout(() => {
+          this.disabled = false;
+          this.innerHTML = '<i class="ti ti-refresh"></i>';
+        }, 1000);
+      });
+    }
+
+    // Toggle custom date range picker
+    const customFilterBtn = document.createElement('button');
+    customFilterBtn.className = 'btn btn-outline-primary dashboard-filter';
+    customFilterBtn.setAttribute('data-filter', 'custom');
+    customFilterBtn.textContent = 'Custom';
+
+    const btnGroup = document.querySelector('.btn-group[role="group"]');
+    if (btnGroup) {
+      btnGroup.appendChild(customFilterBtn);
+
+      customFilterBtn.addEventListener('click', function () {
+        document.querySelector('.date-range-container').style.display = 'block';
+      });
+    }
+
+    // Handle export button
+    const exportBtn = document.getElementById('exportChart');
+    if (exportBtn) {
+      exportBtn.addEventListener('click', function () {
+        // Construct the data for the request
+        const chartData = document.getElementById('weekly_course_visits_data').value;
+        window.location.href = '/download_graph?weekly_course_visits=' + encodeURIComponent(chartData);
+      });
+    }
+
+    // Handle apply date range button
+    const applyDateRangeBtn = document.getElementById('applyDateRange');
+    if (applyDateRangeBtn) {
+      applyDateRangeBtn.addEventListener('click', function () {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+
+        if (startDate && endDate) {
+          // Show loading state
+          showLoadingState();
+
+          // Fetch data with custom date range
+          fetchDashboardData('custom', { startDate, endDate });
+        }
+      });
+    }
+  });
+</script>
+
+<!-- Add script to initialize custom date range functionality -->
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Initialize filter functionality
+    const filterItems = document.querySelectorAll('.dashboard-filter-item');
+    filterItems.forEach(item => {
+      item.addEventListener('click', function (e) {
+        e.preventDefault();
+
+        // Remove active class from all items
+        filterItems.forEach(btn => btn.classList.remove('active'));
+
+        // Add active class to clicked item
+        this.classList.add('active');
+
+        // Get filter type
+        const filterType = this.dataset.filter;
+
+        // Update filter display
+        document.getElementById('activeFilterName').textContent =
+          this.textContent.charAt(0).toUpperCase() + this.textContent.slice(1);
+
+        // Handle custom date range
+        if (filterType === 'custom') {
+          document.querySelector('.date-range-container').style.display = 'block';
+        } else {
+          document.querySelector('.date-range-container').style.display = 'none';
+
+          // Show loading state
+          showLoadingState();
+
+          // Fetch data with the selected filter
+          fetchDashboardData(filterType);
+        }
+      });
+    });
+
+    // Handle custom date range button
+    const customDateRangeBtn = document.getElementById('customDateRangeBtn');
+    if (customDateRangeBtn) {
+      customDateRangeBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        document.querySelector('.date-range-container').style.display = 'block';
+      });
+    }
+
+    // Handle apply date range button
+    const applyDateRangeBtn = document.getElementById('applyDateRange');
+    if (applyDateRangeBtn) {
+      applyDateRangeBtn.addEventListener('click', function () {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+
+        if (startDate && endDate) {
+          // Show loading state
+          showLoadingState();
+
+          // Update filter display
+          document.getElementById('activeFilterName').textContent =
+            `Custom (${startDate} to ${endDate})`;
+
+          // Fetch data with custom date range
+          fetchDashboardData('custom', { startDate, endDate });
+
+          // Update download link
+          updateDownloadLink(startDate, endDate);
+        } else {
+          alert('Please select both start and end dates');
+        }
+      });
+    }
+
+    // Handle manual refresh button
+    const refreshChartBtn = document.getElementById('refreshChartBtn');
+    if (refreshChartBtn) {
+      refreshChartBtn.addEventListener('click', function () {
+        this.disabled = true;
+        this.innerHTML = '<i class="ti ti-loader ti-spin"></i>';
+
+        // Get current active filter
+        const activeFilter = document.querySelector('.dashboard-filter-item.active');
+        const filterType = activeFilter ? activeFilter.dataset.filter : 'weekly';
+
+        // Fetch data with the selected filter
+        fetchDashboardData(filterType);
+
+        // Re-enable button after delay
+        setTimeout(() => {
+          this.disabled = false;
+          this.innerHTML = '<i class="ti ti-refresh"></i>';
+        }, 1000);
+      });
+    }
+
+    // Function to update download link with date parameters
+    function updateDownloadLink(startDate, endDate) {
+      const downloadLink = document.getElementById('downloadGraphLink');
+      if (downloadLink) {
+        const baseUrl = downloadLink.href.split('?')[0];
+        const chartData = document.getElementById('weekly_course_visits_data').value;
+        downloadLink.href = `${baseUrl}?weekly_course_visits=${encodeURIComponent(chartData)}&start_date=${startDate}&end_date=${endDate}`;
+      }
+    }
+
+    // Set initial dates for the date picker to current week
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay()); // Start of current week (Sunday)
+
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+
+    if (startDateInput && endDateInput) {
+      startDateInput.value = startOfWeek.toISOString().slice(0, 10);
+      endDateInput.value = today.toISOString().slice(0, 10);
+    }
+  });
+</script>
+
+<!-- Add real-time indicator -->
+<style>
+  .data-timestamp {
+    font-size: 12px;
+    padding: 5px 10px;
+    border-radius: 4px;
+    background-color: #f8f9fa;
+  }
+
+  .data-timestamp .badge {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .chart-container.loading {
+    position: relative;
+    min-height: 150px;
+  }
+
+  .chart-loader {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(255, 255, 255, 0.7);
+    z-index: 10;
+  }
+
+  @keyframes pulse {
+    0% {
+      opacity: 0.8;
+    }
+
+    50% {
+      opacity: 0.4;
+    }
+
+    100% {
+      opacity: 0.8;
+    }
+  }
+
+  .fade-in {
+    animation: fadeIn 0.5s;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Active filter styling */
+  .dropdown-item.dashboard-filter-item.active {
+    background-color: rgba(13, 110, 253, 0.1);
+    color: #0d6efd;
+    font-weight: 600;
+  }
+
+  /* Filter display styling */
+  #currentFilterDisplay {
+    transition: all 0.3s ease;
+  }
+
+  /* Date range container styling */
+  .date-range-container {
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    margin: 0;
+  }
+
+  .date-range-container[style*="block"] {
+    max-height: 200px;
+    opacity: 1;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+  }
+</style>
+
+<script>
+  function downloadMonthlyGraph() {
+    const startDate = document.getElementById('startDate')?.value || new Date().toISOString().split('T')[0];
+    const endDate = document.getElementById('endDate')?.value || new Date().toISOString().split('T')[0];
+    updateDownloadLink(startDate, endDate, 'monthly');
+    document.getElementById('downloadGraphLink').click();
+  }
+
+  function downloadSummary() {
+    const startDate = document.getElementById('startDate')?.value || new Date().toISOString().split('T')[0];
+    const endDate = document.getElementById('endDate')?.value || new Date().toISOString().split('T')[0];
+    updateDownloadLink(startDate, endDate, 'summary');
+    document.getElementById('downloadGraphLink').click();
+  }
+</script>
+{% endblock %}

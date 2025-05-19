@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Library Access Monitor</title>
+  <link rel="shortcut icon" type="image/png"
+    href="{{ url_for('static', filename='assets/images/logos/favicon.png') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='assets/css/styles.min.css') }}" />
+</head>
+
+<body>
+  <!--  Body Wrapper -->
+  <div class="page-wrapper" id="main-wrapper" data-layout="vertical" data-navbarbg="skin6" data-sidebartype="full"
+    data-sidebar-position="fixed" data-header-position="fixed">
+    <div
+      class="position-relative overflow-hidden text-bg-light min-vh-100 d-flex align-items-center justify-content-center">
+      <div class="d-flex align-items-center justify-content-center w-100">
+        <div class="row justify-content-center w-100">
+          <div class="col-md-8 col-lg-6 col-xxl-3">
+            <div class="card mb-0">
+              <div class="card-body">
+                <a href="admin/login" class="text-nowrap logo-img text-center d-block py-3 w-100">
+                  <img src="{{ url_for('static', filename='assets/images/logos/logo.svg') }}" alt="">
+                </a>
+                <p class="text-center">Library Access Monitor Admin</p>
+                <form method="POST" action="{{ url_for('admin_login') }}">
+                  <div class="mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="username" name="username"
+                      placeholder="Enter your username">
+                  </div>
+                  <div class="mb-4">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="password" name="password"
+                      placeholder="Enter your password">
+                  </div>
+                  <div class="d-flex align-items-center justify-content-between mb-4">
+                    <a class="text-primary fw-bold"
+                      href="mailto:kentedoloverio24@gmail.com?subject=Reset Password [ USTP Library ]">Forgot Password
+                      ?</a>
+                  </div>
+                  <button type="submit" class="btn btn-primary w-100 py-8 fs-4 mb-4">Login</button>
+                </form>
+                {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                <div class="alert alert-warning d-flex justify-content-center thq-section-max-width">
+                  {{ messages[0] }}
+                </div>
+                {% endif %}
+                {% endwith %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="{{ url_for('static', filename='assets/libs/jquery/dist/jquery.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='assets/libs/bootstrap/dist/js/bootstrap.bundle.min.js') }}"></script>
+  <!-- solar icons -->
+  <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js"></script>
+  <!-- Notiflix library -->
+  <script src="https://cdn.jsdelivr.net/npm/notiflix@3.2.6/dist/notiflix-aio-3.2.6.min.js"></script>
+
+  <script>
+    /**
+     * Standard Flash Message System
+     * Consistent approach for handling notifications across the application
+     */
+
+    // Configure Notiflix with standard settings
+    Notiflix.Notify.init({
+      position: 'right-top',
+      timeout: 5000,
+      distance: '10px',
+      opacity: 1,
+      borderRadius: '5px',
+      width: '280px',
+      closeButton: true,
+      clickToClose: true
+    });
+
+    // Loading spinner configuration
+    Notiflix.Loading.init({
+      svgColor: '#0D6EFD',
+      messageFontSize: '1rem',
+      backgroundColor: 'rgba(0,0,0,0.8)'
+    });
+
+    // Process flash messages on page load
+    document.addEventListener('DOMContentLoaded', function () {
+      // Process backend error message
+      const error = "{{ error|default('') }}";
+      if (error && error !== "None" && error !== "") {
+        showNotification('failure', error);
+      }
+
+      // Process Bootstrap alerts and convert to Notiflix
+      const alertElements = document.querySelectorAll('.alert');
+      alertElements.forEach(function (alert) {
+        let category = 'info';
+        if (alert.classList.contains('alert-warning')) category = 'warning';
+        if (alert.classList.contains('alert-danger')) category = 'failure';
+        if (alert.classList.contains('alert-success')) category = 'success';
+
+        const message = alert.textContent.trim();
+        if (message) {
+          showNotification(category, message);
+          alert.style.display = 'none'; // Hide original alert
+        }
+      });
+
+      // Process flash messages from hidden container
+      const flashContainer = document.getElementById('flash-data');
+      if (flashContainer) {
+        const messages = flashContainer.querySelectorAll('.flash-message');
+        messages.forEach(function (messageEl) {
+          const category = messageEl.getAttribute('data-category') || 'info';
+          const message = messageEl.textContent;
+          showNotification(category, message);
+        });
+      }
+
+      // Add loading indicator to login form
+      document.querySelector('form').addEventListener('submit', function () {
+        showLoading('Logging in...');
+      });
+    });
+
+    /**
+     * Show a notification using Notiflix
+     */
+    function showNotification(category, message) {
+      switch (category) {
+        case 'success':
+          Notiflix.Notify.success(message);
+          break;
+        case 'error':
+        case 'danger':
+        case 'failure':
+          Notiflix.Notify.failure(message);
+          break;
+        case 'warning':
+          Notiflix.Notify.warning(message);
+          break;
+        default:
+          Notiflix.Notify.info(message);
+      }
+    }
+
+    /**
+     * Show a loading indicator
+     */
+    function showLoading(message = 'Loading...') {
+      Notiflix.Loading.pulse(message);
+    }
+  </script>
+
+  <!-- Hidden container for flash messages -->
+  <div id="flash-data" style="display:none;">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+    <div class="flash-message" data-category="{{ category }}">{{ message }}</div>
+    {% endfor %}
+    {% endwith %}
+  </div>
+</body>
+
+</html>

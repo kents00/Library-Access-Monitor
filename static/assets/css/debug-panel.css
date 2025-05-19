@@ -1,0 +1,162 @@
+.debug-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: transparent;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  border: none;
+}
+
+.debug-toggle:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.debug-toggle.active {
+  background-color: rgba(0, 0, 0, 0.08);
+}
+
+.debug-panel {
+  position: fixed;
+  bottom: -600px;
+  right: 20px;
+  width: 80%;
+  max-width: 800px;
+  height: 500px;
+  background-color: #fff;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  border-radius: 10px 10px 0 0;
+  transition: bottom 0.3s ease-in-out;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+}
+
+.debug-panel.active {
+  bottom: 0;
+}
+
+.debug-header {
+  padding: 8px 15px;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: 8px 8px 0 0;
+}
+
+.debug-header h5 {
+  margin: 0;
+  font-size: 14px;
+  color: #333;
+}
+
+.debug-controls {
+  display: flex;
+  gap: 5px;
+}
+
+.debug-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.debug-log {
+  font-family: monospace;
+  font-size: 13px;
+}
+
+.debug-entry {
+  margin-bottom: 10px;
+  border: 1px solid #eee;
+  border-radius: 5px;
+}
+
+.debug-section-header {
+  padding: 8px 12px;
+  background-color: #f9f9f9;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.debug-method {
+  font-weight: bold;
+  margin-right: 10px;
+}
+
+.debug-url {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #0066cc;
+}
+
+.debug-time {
+  color: #777;
+  font-size: 12px;
+}
+
+.debug-details {
+  display: none;
+  padding: 10px;
+  background-color: #fafafa;
+  overflow-x: auto;
+}
+
+.debug-details.visible {
+  display: block;
+}
+
+.debug-details pre {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.debug-status {
+  font-weight: bold;
+}
+
+.debug-status.success {
+  color: #28a745;
+}
+
+.debug-status.error {
+  color: #dc3545;
+}
+
+.debug-response {
+  border-top: 1px solid #eee;
+}
+
+.debug-error {
+  border-top: 1px solid #ffeeee;
+  background-color: #fff8f8;
+}
+
+.debug-error-label {
+  color: #dc3545;
+  font-weight: bold;
+}
+
+.debug-empty {
+  padding: 20px;
+  text-align: center;
+  color: #777;
+}
+
+@media (max-width: 768px) {
+  .debug-panel {
+    width: 100%;
+    right: 0;
+    max-width: 100%;
+  }
+}
