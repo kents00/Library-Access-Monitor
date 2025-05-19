@@ -14,3 +14,4 @@ admin_template
 ignore
 .db
 *.sqlite3
+library.db
