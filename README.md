@@ -2,7 +2,7 @@
 
 A web-based library attendance system built with Flask, designed to streamline student attendance management in libraries. This application allows students to check in via ID, and it provides admins with tools to view attendance metrics, generate reports, and manage user data.
 
-![image](https://github.com/user-attachments/assets/ad83c896-f126-48bb-b4ce-c71e4e6d13ba)
+![image](https://github.com/user-attachments/assets/bdd128d3-d202-453c-a68f-33d7b51e199f)
 
 ## Features
 
