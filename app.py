@@ -4,8 +4,10 @@ import datetime
 import json
 from config import Config
 from models import db
-# Import export functions
 from utils.export import export_attendance_csv, export_attendance_pdf
+
+from dotenv import load_dotenv
+load_dotenv()
 
 # Import the backup function at the top of the file
 from utils.backup import backup_deleted_records
@@ -515,5 +517,5 @@ def manage_admins():
 
 
 if __name__ == '__main__':
-    app.run(host=app.config['HOST'], port=app.config['PORT'], debug=app.config['DEBUG'])
+    app.run(host=app.config['HOST'], port=app.config['PORT'], debug=app.config['DEBUG'], secret_key=app.config['SECRET_KEY'])
 

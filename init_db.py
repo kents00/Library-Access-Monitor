@@ -26,8 +26,8 @@ def init_database(app=None):
         admin = User.query.filter_by(role='admin').first()
         if not admin:
             admin = User(
-                username='admin',
-                password=generate_password_hash('admin'),
+                username='ustplibrary',
+                password=generate_password_hash('ustplibrary@2025'),
                 role='admin'
             )
             db.session.add(admin)
