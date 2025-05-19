@@ -1,4 +1,4 @@
-# Library Access Monitor
+# Library Attendace Management
 
 A web-based library attendance system built with Flask, designed to streamline student attendance management in libraries. This application allows students to check in via ID, and it provides admins with tools to view attendance metrics, generate reports, and manage user data.
 
