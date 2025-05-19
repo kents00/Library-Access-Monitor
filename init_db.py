@@ -49,6 +49,7 @@ def init_database(app=None):
             Location(id=2, barangay="Punta", municipality="Panaon", province="Misamis Occidental"),
             Location(id=3, barangay="Butuay", municipality="Jimenez", province="Misamis Occidental"),
             Location(id=4, barangay="Colupan Bajo", municipality="Sinacaban", province="Misamis Occidental"),
+            Location(id=5, barangay="Lupez", municipality="Culo Molave", province="Zamboanga del Sur"),
         ]
         for location in locations:
             # Check if location already exists
@@ -99,7 +100,17 @@ def init_database(app=None):
                 "location_id": 4,
                 "course_id": 1,
                 "image": "Kent.jpg",
-            }
+            },
+            {
+                "id": "2023304607",
+                "first_name": "Cristian Mark",
+                "middle_name": "Roble",
+                "last_name": "Catiloc",
+                "age": 20,
+                "location_id": 5,
+                "course_id": 1,
+                "image": "Cristian.jpg",
+            },
         ]
 
         # Add students
