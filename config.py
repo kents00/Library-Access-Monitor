@@ -10,4 +10,4 @@ class Config:
     SQLALCHEMY_ECHO = os.environ.get('SQLALCHEMY_ECHO', 'False').lower() == 'true'
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
     PORT = int(os.environ.get('PORT', 10000))
-    HOST = os.environ.get('HOST', 'localhost')
+    HOST = os.environ.get('HOST', '0.0.0.0')
