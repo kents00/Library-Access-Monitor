@@ -133,6 +133,8 @@
 
   function confirmDelete() {
     if (studentToDelete) {
+      Notiflix.Loading.pulse('Deleting student...');
+
       fetch(`/admin/delete_student/${studentToDelete}`, {
         method: 'DELETE',
         headers: {
@@ -141,13 +143,22 @@
       })
         .then(response => response.json())
         .then(data => {
+          Notiflix.Loading.remove();
+
           if (data.success) {
-            window.location.reload();
+            showNotification('success', data.message);
+            setTimeout(() => {
+              window.location.reload();
+            }, 1000);
           } else {
-            alert(data.message);
+            showNotification('failure', data.message);
           }
         })
-        .catch(error => console.error('Error:', error));
+        .catch(error => {
+          Notiflix.Loading.remove();
+          showNotification('failure', 'An error occurred while deleting the student.');
+          console.error('Error:', error);
+        });
     }
   }
 </script>

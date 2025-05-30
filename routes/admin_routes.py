@@ -22,6 +22,7 @@ from models.student import Student
 from models.attendance import Attendance
 from models.location import Location
 from utils.export import export_attendance_csv, export_attendance_pdf
+from utils.backup import backup_deleted_records  # Add this import
 from utils.email_verification import (
     generate_verification_code,
     send_verification_email,
@@ -73,7 +74,6 @@ def admin_dashboard():
                 start_date = today - timedelta(weeks=52)
                 end_date = today
             else:
-                # Default to weekly if something goes wrong
                 start_date = today - timedelta(weeks=1)
                 end_date = today
 
@@ -81,193 +81,152 @@ def admin_dashboard():
             current_app.logger.debug(f"Filter: {filter_type}, Date range: {start_date} to {end_date}")
 
             if request.method == 'POST' and 'export_csv' in request.form:
-                return export_attendance_csv(start_date)
+                return export_attendance_csv(start_date, end_date)
 
-            course_mapping = {
-                course.id: course.course_name for course in Course.query.all()}
+            # Get all courses first to ensure all are included in chart data
+            all_courses = Course.query.all()
+            current_app.logger.debug(f"Found {len(all_courses)} courses in database")
 
-            # Debug query parameters
-            current_app.logger.debug(f"Query parameters: {dict(request.args)}")
+            # Initialize weekly course visits with all available courses
+            weekly_course_visits = {}
+            for course in all_courses:
+                weekly_course_visits[course.course_name] = [0, 0, 0, 0, 0, 0, 0]
+                current_app.logger.debug(f"Initialized course: {course.course_name}")
 
+            # Query attendance data grouped by course and day of week
+            attendance_by_course_day = (
+                db.session.query(
+                    Course.course_name,
+                    extract('dow', Attendance.check_in_time).label('day_of_week'),
+                    db.func.count(Attendance.id).label('visit_count')
+                )
+                .join(Student, Student.id == Attendance.student_id)
+                .join(Course, Course.id == Student.course_id)
+                .filter(Attendance.check_in_time >= start_date)
+                .filter(Attendance.check_in_time <= end_date)
+                .group_by(Course.course_name, extract('dow', Attendance.check_in_time))
+                .all()
+            )
+
+            current_app.logger.debug(f"Found {len(attendance_by_course_day)} attendance records")
+
+            # Populate the weekly course visits data
+            for course_name, day_of_week, visit_count in attendance_by_course_day:
+                if course_name in weekly_course_visits:
+                    # Convert PostgreSQL day of week (0=Sunday) to array index
+                    day_index = int(day_of_week)
+                    weekly_course_visits[course_name][day_index] = visit_count
+                    current_app.logger.debug(f"Updated {course_name} day {day_index}: {visit_count} visits")
+
+            # Log final chart data
+            current_app.logger.debug(f"Final weekly_course_visits: {weekly_course_visits}")
+
+            # Get place visits data
             place_visits_raw = (
                 db.session.query(Location.municipality, db.func.count(
                     Attendance.id).label('visits'))
                 .join(Student, Student.location_id == Location.id)
                 .join(Attendance, Attendance.student_id == Student.id)
                 .filter(Attendance.check_in_time >= start_date)
+                .filter(Attendance.check_in_time <= end_date)
                 .group_by(Location.municipality)
+                .order_by(db.func.count(Attendance.id).desc())
                 .all()
             )
 
             place_visits = [{"municipality": place, "visits": visits}
                             for place, visits in place_visits_raw]
 
-            # Modified: Get recent logins instead of using is_logged_in flag
-            # Consider students who logged in within the last 24 hours as "logged in"
+            # Get recent logins (students who logged in within the last 24 hours)
             recent_time = today - timedelta(hours=24)
-            logged_in_users = db.session.query(Student, db.func.max(Attendance.check_in_time).label('login_time')).join(
-                Attendance, Student.id == Attendance.student_id).filter(
-                Attendance.check_in_time >= recent_time).group_by(Student.id).all()
 
-            # Convert logged_in_users to serializable format
-            logged_in_users_data = [
-                {
-                    'student': user[0].to_dict(),
-                    'login_time': user[1].isoformat() if user[1] else None
-                }
-                for user in logged_in_users
-            ]
-
-            total_visitors = db.session.query(Attendance.student_id).filter(
-                Attendance.check_in_time >= start_date).distinct().count()
-
-            course_visits_by_month = (
-                db.session.query(
-                    Course.course_name,
-                    extract('month', Attendance.check_in_time).label('month'),
-                    db.func.count(Attendance.id).label('visits')
-                )
-                .select_from(Student)
-                .join(Course, Student.course_id == Course.id)
-                .join(Attendance, Attendance.student_id == Student.id)
-                .filter(Attendance.check_in_time >= start_date)
-                .group_by(Course.course_name, extract('month', Attendance.check_in_time))
+            recent_logins = (
+                db.session.query(Attendance, Student)
+                .join(Student, Student.id == Attendance.student_id)
+                .filter(Attendance.check_in_time >= recent_time)
+                .order_by(Attendance.check_in_time.desc())
+                .limit(10)
                 .all()
             )
 
-            monthly_course_visits = {
-                'Information Technology': [0] * 12,
-                'Marine Biology': [0] * 12,
-                'Technology and Livelihood Education': [0] * 12,
-                'Home Economics and Industrial Arts': [0] * 12,
-            }
+            logged_in_users = []
+            for attendance, student in recent_logins:
+                logged_in_users.append({
+                    'student': student.to_dict(),
+                    'login_time': attendance.check_in_time.isoformat()
+                })
 
-            for course, month, visits in course_visits_by_month:
-                if course in monthly_course_visits:
-                    monthly_course_visits[course][month - 1] = visits
+            # Calculate statistics
+            total_visitors = db.session.query(db.func.count(Attendance.id)).filter(
+                Attendance.check_in_time >= start_date,
+                Attendance.check_in_time <= end_date
+            ).scalar() or 0
 
-            weekly_course_visits = {
-                'Information Technology': [0] * 7,
-                'Marine Biology': [0] * 7,
-                'Technology and Livelihood Education': [0] * 7,
-                'Home Economics and Industrial Arts': [0] * 7,
-            }
+            # Calculate monthly logins
+            month_start = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            total_logins_month = db.session.query(db.func.count(Attendance.id)).filter(
+                Attendance.check_in_time >= month_start
+            ).scalar() or 0
 
-            course_visits_by_week = (
-                db.session.query(
-                    Course.course_name,
-                    extract('dow', Attendance.check_in_time).label('day_of_week'),
-                    db.func.count(Attendance.id).label('visits')
-                )
-                .select_from(Student)
-                .join(Course, Student.course_id == Course.id)
-                .join(Attendance, Attendance.student_id == Student.id)
-                .filter(Attendance.check_in_time >= start_date)
-                .group_by(Course.course_name, extract('dow', Attendance.check_in_time))
-                .all()
-            )
+            # Calculate percentage increase (simplified)
+            prev_month_start = (month_start - timedelta(days=1)).replace(day=1)
+            prev_month_logins = db.session.query(db.func.count(Attendance.id)).filter(
+                Attendance.check_in_time >= prev_month_start,
+                Attendance.check_in_time < month_start
+            ).scalar() or 1
 
-            for course, day_of_week, visits in course_visits_by_week:
-                if course in weekly_course_visits:
-                    weekly_course_visits[course][day_of_week] = visits
+            login_percentage_increase = round(
+                ((total_logins_month - prev_month_logins) / prev_month_logins) * 100, 1
+            ) if prev_month_logins > 0 else 0
 
-            # Calculate weekly place visits
-            weekly_place_visits_raw = (
-                db.session.query(Location.municipality, db.func.count(Attendance.id).label('visits'))
-                .join(Student, Student.location_id == Location.id)
-                .join(Attendance, Attendance.student_id == Student.id)
-                .filter(Attendance.check_in_time >= start_date)
-                .group_by(Location.municipality)
-                .all()
-            )
-
-            weekly_place_visits = [{"municipality": place, "visits": visits} for place, visits in weekly_place_visits_raw]
-            weekly_place_visits.sort(key=lambda x: x['visits'], reverse=True)  # Sort by visits in descending order
-
-            # Calculate monthly place visits
-            monthly_place_visits_raw = (
-                db.session.query(Location.municipality, db.func.count(Attendance.id).label('visits'))
-                .join(Student, Student.location_id == Location.id)
-                .join(Attendance, Attendance.student_id == Student.id)
-                .filter(Attendance.check_in_time >= (today - timedelta(weeks=4)))
-                .group_by(Location.municipality)
-                .all()
-            )
-
-            monthly_place_visits = [{"municipality": place, "visits": visits} for place, visits in monthly_place_visits_raw]
-
-            # Get the top two places for weekly visits
-            top_weekly_places = sorted(weekly_place_visits, key=lambda x: x['visits'], reverse=True)[:2]
-
-            # Ensure no None or Undefined values in weekly_course_visits
-            for course in weekly_course_visits:
-                weekly_course_visits[course] = [0 if v is None else v for v in weekly_course_visits[course]]
-
-            # Ensure no None or Undefined values in course_mapping
-            course_mapping = {k: (v if v is not None else "") for k, v in course_mapping.items()}
-
-            # Calculate total log-ins in a month
-            start_date_month = today - timedelta(weeks=4)
-            total_logins_month = db.session.query(Attendance).filter(
-                Attendance.check_in_time >= start_date_month).count()
-
-            # Calculate percentage increase in log-ins compared to the previous month
-            start_date_prev_month = start_date_month - timedelta(weeks=4)
-            total_logins_prev_month = db.session.query(Attendance).filter(
-                Attendance.check_in_time >= start_date_prev_month,
-                Attendance.check_in_time < start_date_month).count()
-
-            if total_logins_prev_month > 0:
-                login_percentage_increase = ((total_logins_month - total_logins_prev_month) / total_logins_prev_month) * 100
-                login_icon_class = "ti-arrow-up-left text-success" if total_logins_month > total_logins_prev_month else "ti-arrow-down-right text-danger"
-                login_bg_class = "bg-light-success" if total_logins_month > total_logins_prev_month else "bg-light-danger"
+            # Set icon classes based on increase/decrease
+            if login_percentage_increase >= 0:
+                login_icon_class = 'ti-arrow-up-left text-success'
+                login_bg_class = 'bg-light-success'
             else:
-                login_percentage_increase = 100  # Assume 100% increase if there were no log-ins in the previous month
-                login_icon_class = "ti-arrow-up-left text-success"
-                login_bg_class = "bg-light-success"
+                login_icon_class = 'ti-arrow-down-right text-danger'
+                login_bg_class = 'bg-light-danger'
 
-            # Determine if top weekly place visits are higher or lower
+            # Top places logic
+            top_weekly_places = place_visits[:2] if place_visits else []
+
             if top_weekly_places:
-                top_weekly_place_visits_icon_class = "ti-arrow-up-left text-success" if top_weekly_places[0]['visits'] > 0 else "ti-arrow-down-right text-danger"
-                top_weekly_place_visits_bg_class = "bg-light-success" if top_weekly_places[0]['visits'] > 0 else "bg-light-danger"
+                top_weekly_place_visits_icon_class = 'ti-arrow-up-left text-success'
+                top_weekly_place_visits_bg_class = 'bg-light-success'
             else:
-                top_weekly_place_visits_icon_class = "ti-arrow-down-right text-danger"
-                top_weekly_place_visits_bg_class = "bg-light-danger"
+                top_weekly_place_visits_icon_class = 'ti-arrow-down-right text-danger'
+                top_weekly_place_visits_bg_class = 'bg-light-danger'
 
-            # Make sure we're returning valid JSON
-            result = {
-                'place_visits': place_visits,
-                'total_visitors': total_visitors,
-                'logged_in_users': logged_in_users_data,
-                'monthly_course_visits': monthly_course_visits,
+            return jsonify({
+                'success': True,
                 'weekly_course_visits': weekly_course_visits,
-                'weekly_place_visits': weekly_place_visits,
-                'monthly_place_visits': monthly_place_visits,
-                'top_weekly_places': top_weekly_places if top_weekly_places else [],
+                'logged_in_users': logged_in_users,
+                'total_visitors': total_visitors,
                 'total_logins_month': total_logins_month,
                 'login_percentage_increase': login_percentage_increase,
                 'login_icon_class': login_icon_class,
                 'login_bg_class': login_bg_class,
+                'top_weekly_places': top_weekly_places,
                 'top_weekly_place_visits_icon_class': top_weekly_place_visits_icon_class,
-                'top_weekly_place_visits_bg_class': top_weekly_place_visits_bg_class
-            }
+                'top_weekly_place_visits_bg_class': top_weekly_place_visits_bg_class,
+                'place_visits': place_visits,
+                'filter_type': filter_type,
+                'start_date': start_date.isoformat(),
+                'end_date': end_date.isoformat()
+            })
 
-            # Add sanity check to make sure we're returning valid data
-            current_app.logger.debug(f"API response data: {result}")
-
-            # Return a proper JSON response
-            return jsonify(result)
         except Exception as e:
-            current_app.logger.error(f"Error in admin dashboard API: {str(e)}", exc_info=True)
+            current_app.logger.error(f"Dashboard error: {str(e)}", exc_info=True)
             return jsonify({
                 'success': False,
-                'message': f'Error generating dashboard data: {str(e)}'
+                'message': f'Error loading dashboard data: {str(e)}',
+                'weekly_course_visits': {},
+                'logged_in_users': [],
+                'total_visitors': 0,
+                'total_logins_month': 0
             }), 500
     else:
-        return jsonify({
-            'success': False,
-            'message': 'Unauthorized access! Admins only.'
-        }), 401
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
 
 @admin_bp.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
@@ -1061,3 +1020,161 @@ def admin_reset_password_post():
         current_app.logger.error(f"Error resetting password: {str(e)}")
         flash('An error occurred while resetting your password. Please try again.', 'danger')
         return render_template('admin_new/ae_reset_password.html', email=email)
+
+@admin_bp.route('/admin/manage_courses', methods=['GET', 'POST'])
+@admin_required
+def manage_courses():
+    if 'admin' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized access'}), 401
+
+    if request.method == 'POST':
+        try:
+            course_name = request.form.get('course_name')
+            if not course_name:
+                return jsonify({'success': False, 'message': 'Course name is required'}), 400
+
+            # Check if course already exists
+            existing_course = Course.query.filter_by(course_name=course_name).first()
+            if existing_course:
+                return jsonify({'success': False, 'message': 'Course already exists'}), 400
+
+            # Create new course
+            new_course = Course(course_name=course_name)
+            db.session.add(new_course)
+            db.session.commit()
+
+            current_app.logger.info(f"Added new course: {course_name}")
+            return jsonify({'success': True, 'message': 'Course added successfully', 'course': new_course.to_dict()})
+
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error adding course: {str(e)}")
+            return jsonify({'success': False, 'message': f'Error adding course: {str(e)}'}), 500
+
+    # GET request - return courses data
+    try:
+        courses = Course.query.all()
+        courses_data = []
+
+        for course in courses:
+            student_count = Student.query.filter_by(course_id=course.id).count()
+            course_dict = course.to_dict()
+            course_dict['student_count'] = student_count
+            courses_data.append(course_dict)
+
+        current_app.logger.debug(f"Returning {len(courses_data)} courses")
+        return render_template('admin_new/ae_manage_courses.html', courses=courses_data)
+    except Exception as e:
+        current_app.logger.error(f"Error loading courses: {str(e)}")
+        flash(f"Error loading courses: {str(e)}", 'danger')
+        return render_template('admin_new/ae_manage_courses.html', courses=[])
+
+@admin_bp.route('/admin/edit_course/<int:course_id>', methods=['GET', 'POST'])
+@admin_required
+def edit_course(course_id):
+    if 'admin' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized access'}), 403
+
+    course = Course.query.get_or_404(course_id)
+
+    if request.method == 'POST':
+        try:
+            course_name = request.form.get('course_name')
+            if not course_name:
+                return jsonify({'success': False, 'message': 'Course name is required'}), 400
+
+            # Check if another course with the same name exists
+            existing_course = Course.query.filter(
+                Course.course_name == course_name,
+                Course.id != course_id
+            ).first()
+
+            if existing_course:
+                return jsonify({'success': False, 'message': 'Course name already exists'}), 400
+
+            course.course_name = course_name
+            db.session.commit()
+
+            return jsonify({'success': True, 'message': 'Course updated successfully!'})
+
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error updating course: {str(e)}")
+            return jsonify({'success': False, 'message': f'Error updating course: {str(e)}'}), 500
+
+    # GET request - get course data and enrolled students
+    try:
+        enrolled_students = Student.query.filter_by(course_id=course.id).all()
+        students_data = [student.to_dict() for student in enrolled_students]
+
+        return render_template('admin_new/ae_edit_course.html',
+                             course=course.to_dict(),
+                             enrolled_students=students_data)
+    except Exception as e:
+        current_app.logger.error(f"Error loading course data: {str(e)}")
+        flash(f"Error loading course data: {str(e)}", 'danger')
+        return redirect(url_for('admin.manage_courses'))
+
+@admin_bp.route('/admin/delete_course/<int:course_id>', methods=['DELETE'])
+@admin_required
+def delete_course(course_id):
+    if 'admin' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized access'}), 403
+
+    try:
+        course = Course.query.get(course_id)
+        if not course:
+            return jsonify({'success': False, 'message': 'Course not found'}), 404
+
+        # Check if there are students enrolled in this course
+        student_count = Student.query.filter_by(course_id=course_id).count()
+        if student_count > 0:
+            return jsonify({'success': False, 'message': f'Cannot delete course. {student_count} students are enrolled in this course.'}), 400
+
+        # Create backup before deletion
+        backup_deleted_records('Course', [course])
+
+        db.session.delete(course)
+        db.session.commit()
+
+        return jsonify({'success': True, 'message': f'Course "{course.course_name}" deleted successfully'}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting course: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error deleting course: {str(e)}'}), 500
+
+@admin_bp.route('/admin/course_students/<int:course_id>', methods=['GET'])
+@admin_required
+def get_course_students(course_id):
+    """Get all students enrolled in a specific course"""
+    if 'admin' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized access'}), 403
+
+    try:
+        course = Course.query.get_or_404(course_id)
+        students = Student.query.filter_by(course_id=course_id).all()
+
+        students_data = []
+        for student in students:
+            student_data = student.to_dict()
+            # Add recent attendance info
+            recent_attendance = Attendance.query.filter_by(student_id=student.id)\
+                .order_by(Attendance.check_in_time.desc()).first()
+
+            if recent_attendance:
+                student_data['last_visit'] = recent_attendance.check_in_time.isoformat()
+            else:
+                student_data['last_visit'] = None
+
+            students_data.append(student_data)
+
+        return jsonify({
+            'success': True,
+            'course': course.to_dict(),
+            'students': students_data
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"Error getting course students: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error getting course students: {str(e)}'}), 500

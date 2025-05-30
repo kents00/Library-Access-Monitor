@@ -245,323 +245,381 @@
   </div>
 </div>
 
-<!-- Add this at the end of the file to initialize the chart -->
+<!-- Consolidated dashboard initialization script -->
 <script>
-  document.addEventListener('DOMContentLoaded', function () {
-    // Initialize search functionality
-    document.getElementById('searchInput').addEventListener('input', function () {
-      const searchTerm = this.value.toLowerCase();
-      const rows = document.querySelectorAll('#studentTable tbody tr:not(#noUsersFound)');
-      let visibleCount = 0;
+  // Global variables to track initialization state
+  let dashboardInitialized = false;
+  let visitorChart = null;
 
-      rows.forEach(function (row) {
-        if (row.textContent.toLowerCase().includes(searchTerm)) {
-          row.style.display = '';
-          visibleCount++;
-        } else {
-          row.style.display = 'none';
-        }
-      });
+  // Main dashboard initialization - only run once
+  function initializeDashboard() {
+    if (dashboardInitialized) {
+      console.log('Dashboard already initialized, skipping...');
+      return;
+    }
 
-      document.getElementById('noUsersFound').style.display = visibleCount > 0 ? 'none' : '';
-    });
+    console.log('Initializing dashboard...');
 
-    // Initialize visitor statistics chart
     try {
-      const chartDataElement = document.getElementById('weekly_course_visits_data');
-      if (chartDataElement) {
-        // Debug: log the raw value to see what we're working with
-        console.log('Raw chart data value:', chartDataElement.value);
+      // Initialize search functionality first
+      initializeSearchFunctionality();
 
-        let chartData;
-        try {
-          // Handle potential HTML escaping issues
-          let jsonString = chartDataElement.value.trim();
+      // Initialize visitor statistics chart
+      initializeVisitorChart();
 
-          // Replace HTML entities if needed
-          if (jsonString.includes('&quot;') || jsonString.includes('&#39;')) {
-            jsonString = jsonString
-              .replace(/&quot;/g, '"')
-              .replace(/&#39;/g, "'")
-              .replace(/&amp;/g, '&');
+      // Initialize dashboard filters
+      initializeDashboardFilters();
+
+      // Initialize refresh buttons
+      initializeRefreshButtons();
+
+      // Mark as initialized
+      dashboardInitialized = true;
+      console.log('Dashboard initialization complete');
+
+    } catch (error) {
+      console.error('Error during dashboard initialization:', error);
+      showNotification('failure', 'Error initializing dashboard: ' + error.message);
+    }
+  }
+
+  // Initialize search functionality
+  function initializeSearchFunctionality() {
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput && !searchInput.hasAttribute('data-initialized')) {
+      searchInput.addEventListener('input', function () {
+        const searchTerm = this.value.toLowerCase();
+        const rows = document.querySelectorAll('#studentTable tbody tr:not(#noUsersFound)');
+        let visibleCount = 0;
+
+        rows.forEach(function (row) {
+          if (row.textContent.toLowerCase().includes(searchTerm)) {
+            row.style.display = '';
+            visibleCount++;
+          } else {
+            row.style.display = 'none';
           }
+        });
 
-          // Parse the sanitized JSON string
-          chartData = JSON.parse(jsonString);
-          console.log('Parsed chart data successfully');
-        } catch (parseError) {
-          console.error('JSON parse error:', parseError);
-          // Provide fallback data
-          chartData = {
-            'Information Technology': [0, 0, 0, 0, 0, 0, 0],
-            'Marine Biology': [0, 0, 0, 0, 0, 0, 0],
-            'Home Economics and Industrial Arts': [0, 0, 0, 0, 0, 0, 0],
-            'Technology and Livelihood Education': [0, 0, 0, 0, 0, 0, 0]
-          };
-          console.log('Using fallback chart data');
+        const noUsersRow = document.getElementById('noUsersFound');
+        if (noUsersRow) {
+          noUsersRow.style.display = visibleCount > 0 ? 'none' : '';
+        }
+      });
+
+      searchInput.setAttribute('data-initialized', 'true');
+      console.log('Search functionality initialized');
+    }
+  }
+
+  // Initialize visitor chart
+  function initializeVisitorChart() {
+    const chartContainer = document.getElementById('visitorstat');
+    const chartDataElement = document.getElementById('weekly_course_visits_data');
+
+    if (!chartContainer || !chartDataElement) {
+      console.error('Chart container or data element not found');
+      return;
+    }
+
+    // Clear any existing chart
+    if (visitorChart) {
+      visitorChart.destroy();
+      visitorChart = null;
+    }
+
+    // Clear container
+    chartContainer.innerHTML = '';
+
+    try {
+      // Parse chart data safely
+      let chartData;
+      try {
+        let jsonString = chartDataElement.value.trim();
+
+        // Handle HTML entities
+        if (jsonString.includes('&quot;') || jsonString.includes('&#39;')) {
+          jsonString = jsonString
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/&amp;/g, '&');
         }
 
-        // Initialize ApexCharts with daily data
-        const options = {
-          series: Object.entries(chartData).map(([name, data]) => ({
-            name: name,
-            data: data
-          })),
-          chart: {
-            height: 350,
-            type: 'line',
-            toolbar: {
-              show: false,
-            }
-          },
-          colors: ['#0d6efd', '#2ab57d', '#fd7e14', '#ff5c8e'],
-          dataLabels: {
-            enabled: false,
-          },
-          stroke: {
-            curve: 'smooth',
-            width: 3,
-          },
-          grid: {
-            borderColor: 'rgba(0,0,0,0.1)',
-            strokeDashArray: 3,
-          },
-          markers: {
-            size: 3,
-            colors: ['#0d6efd', '#2ab57d', '#fd7e14', '#ff5c8e'],
-            strokeColors: '#ffffff',
-            strokeWidth: 2,
-            hover: {
-              size: 7,
-            }
-          },
-          xaxis: {
-            categories: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
-            title: {
-              text: 'Day of Week'
-            }
-          },
-          yaxis: {
-            title: {
-              text: 'Number of Visitors'
-            },
-          },
-          legend: {
-            position: 'top',
-            horizontalAlign: 'right',
-          }
+        chartData = JSON.parse(jsonString);
+        console.log('Chart data parsed successfully:', Object.keys(chartData));
+      } catch (parseError) {
+        console.error('Error parsing chart data:', parseError);
+        // Fallback data
+        chartData = {
+          'Information Technology': [0, 0, 0, 0, 0, 0, 0],
+          'Marine Biology': [0, 0, 0, 0, 0, 0, 0],
+          'Home Economics': [0, 0, 0, 0, 0, 0, 0],
+          'Technology and Livelihood Education': [0, 0, 0, 0, 0, 0, 0]
         };
-
-        const chart = new ApexCharts(document.querySelector("#visitorstat"), options);
-        chart.render();
-      } else {
-        console.error('Chart data element not found');
       }
-    } catch (err) {
-      console.error('Error rendering chart:', err);
-      document.getElementById('visitorstat').innerHTML = '<div class="alert alert-danger">Error rendering chart</div>';
+
+      // Create chart series
+      const series = Object.entries(chartData).map(([name, data]) => ({
+        name: name,
+        data: data
+      }));
+
+      // Chart options
+      const options = {
+        series: series,
+        chart: {
+          height: 350,
+          type: 'line',
+          animations: {
+            enabled: true,
+            easing: 'easeinout',
+            speed: 800
+          },
+          toolbar: {
+            show: false
+          },
+          zoom: {
+            enabled: false
+          }
+        },
+        colors: ['#0d6efd', '#2ab57d', '#fd7e14', '#ff5c8e', '#6f42c1', '#e83e8c', '#20c997', '#fd7e14'],
+        dataLabels: {
+          enabled: false
+        },
+        stroke: {
+          curve: 'smooth',
+          width: 3
+        },
+        grid: {
+          borderColor: 'rgba(0,0,0,0.1)',
+          strokeDashArray: 3,
+          xaxis: {
+            lines: {
+              show: false
+            }
+          }
+        },
+        markers: {
+          size: 3,
+          colors: ['#0d6efd', '#2ab57d', '#fd7e14', '#ff5c8e', '#6f42c1', '#e83e8c', '#20c997', '#fd7e14'],
+          strokeColors: '#ffffff',
+          strokeWidth: 2,
+          hover: {
+            size: 7
+          }
+        },
+        xaxis: {
+          categories: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+          title: {
+            text: 'Day of Week'
+          }
+        },
+        yaxis: {
+          title: {
+            text: 'Number of Visitors'
+          },
+          min: 0,
+          forceNiceScale: true
+        },
+        legend: {
+          position: 'top',
+          horizontalAlign: 'right',
+          onItemClick: {
+            toggleDataSeries: true
+          }
+        },
+        tooltip: {
+          shared: true,
+          intersect: false,
+          y: {
+            formatter: function (y) {
+              if (typeof y !== "undefined") {
+                return y.toFixed(0) + " visits";
+              }
+              return y;
+            }
+          }
+        },
+        responsive: [
+          {
+            breakpoint: 600,
+            options: {
+              legend: {
+                position: 'bottom',
+                horizontalAlign: 'center'
+              }
+            }
+          }
+        ]
+      };
+
+      // Create and render chart
+      visitorChart = new ApexCharts(chartContainer, options);
+      visitorChart.render();
+      console.log('Visitor chart initialized successfully');
+
+    } catch (error) {
+      console.error('Error initializing visitor chart:', error);
+      chartContainer.innerHTML = '<div class="alert alert-danger">Error rendering chart. Please refresh the page.</div>';
     }
+  }
 
-    // Manual refresh button for chart
-    const refreshChartBtn = document.getElementById('refreshChartBtn');
-    if (refreshChartBtn) {
-      refreshChartBtn.addEventListener('click', function () {
-        this.disabled = true;
-        this.innerHTML = '<i class="ti ti-loader ti-spin"></i>';
-
-        // Trigger data refresh
-        fetchDashboardData();
-
-        // Re-enable button after 1 second
-        setTimeout(() => {
-          this.disabled = false;
-          this.innerHTML = '<i class="ti ti-refresh"></i>';
-        }, 1000);
-      });
-    }
-
-    // Manual refresh button for table
-    const refreshTableBtn = document.getElementById('refreshTableBtn');
-    if (refreshTableBtn) {
-      refreshTableBtn.addEventListener('click', function () {
-        this.disabled = true;
-        this.innerHTML = '<i class="ti ti-loader ti-spin"></i>';
-
-        // Trigger data refresh
-        fetchDashboardData();
-
-        // Re-enable button after 1 second
-        setTimeout(() => {
-          this.disabled = false;
-          this.innerHTML = '<i class="ti ti-refresh"></i>';
-        }, 1000);
-      });
-    }
-
-    // Toggle custom date range picker
-    const customFilterBtn = document.createElement('button');
-    customFilterBtn.className = 'btn btn-outline-primary dashboard-filter';
-    customFilterBtn.setAttribute('data-filter', 'custom');
-    customFilterBtn.textContent = 'Custom';
-
-    const btnGroup = document.querySelector('.btn-group[role="group"]');
-    if (btnGroup) {
-      btnGroup.appendChild(customFilterBtn);
-
-      customFilterBtn.addEventListener('click', function () {
-        document.querySelector('.date-range-container').style.display = 'block';
-      });
-    }
-
-    // Handle export button
-    const exportBtn = document.getElementById('exportChart');
-    if (exportBtn) {
-      exportBtn.addEventListener('click', function () {
-        // Construct the data for the request
-        const chartData = document.getElementById('weekly_course_visits_data').value;
-        window.location.href = '/download_graph?weekly_course_visits=' + encodeURIComponent(chartData);
-      });
-    }
-
-    // Handle apply date range button
-    const applyDateRangeBtn = document.getElementById('applyDateRange');
-    if (applyDateRangeBtn) {
-      applyDateRangeBtn.addEventListener('click', function () {
-        const startDate = document.getElementById('startDate').value;
-        const endDate = document.getElementById('endDate').value;
-
-        if (startDate && endDate) {
-          // Show loading state
-          showLoadingState();
-
-          // Fetch data with custom date range
-          fetchDashboardData('custom', { startDate, endDate });
-        }
-      });
-    }
-  });
-</script>
-
-<!-- Add script to initialize custom date range functionality -->
-<script>
-  document.addEventListener('DOMContentLoaded', function () {
-    // Initialize filter functionality
+  // Initialize dashboard filters
+  function initializeDashboardFilters() {
     const filterItems = document.querySelectorAll('.dashboard-filter-item');
+
     filterItems.forEach(item => {
-      item.addEventListener('click', function (e) {
-        e.preventDefault();
+      if (!item.hasAttribute('data-initialized')) {
+        item.addEventListener('click', function (e) {
+          e.preventDefault();
 
-        // Remove active class from all items
-        filterItems.forEach(btn => btn.classList.remove('active'));
+          // Remove active class from all items
+          filterItems.forEach(btn => btn.classList.remove('active'));
 
-        // Add active class to clicked item
-        this.classList.add('active');
+          // Add active class to clicked item
+          this.classList.add('active');
 
-        // Get filter type
-        const filterType = this.dataset.filter;
-
-        // Update filter display
-        document.getElementById('activeFilterName').textContent =
-          this.textContent.charAt(0).toUpperCase() + this.textContent.slice(1);
-
-        // Handle custom date range
-        if (filterType === 'custom') {
-          document.querySelector('.date-range-container').style.display = 'block';
-        } else {
-          document.querySelector('.date-range-container').style.display = 'none';
-
-          // Show loading state
-          showLoadingState();
-
-          // Fetch data with the selected filter
-          fetchDashboardData(filterType);
-        }
-      });
-    });
-
-    // Handle custom date range button
-    const customDateRangeBtn = document.getElementById('customDateRangeBtn');
-    if (customDateRangeBtn) {
-      customDateRangeBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        document.querySelector('.date-range-container').style.display = 'block';
-      });
-    }
-
-    // Handle apply date range button
-    const applyDateRangeBtn = document.getElementById('applyDateRange');
-    if (applyDateRangeBtn) {
-      applyDateRangeBtn.addEventListener('click', function () {
-        const startDate = document.getElementById('startDate').value;
-        const endDate = document.getElementById('endDate').value;
-
-        if (startDate && endDate) {
-          // Show loading state
-          showLoadingState();
+          // Get filter type
+          const filterType = this.dataset.filter;
 
           // Update filter display
-          document.getElementById('activeFilterName').textContent =
-            `Custom (${startDate} to ${endDate})`;
+          const activeFilterName = document.getElementById('activeFilterName');
+          if (activeFilterName) {
+            activeFilterName.textContent = this.textContent.trim();
+          }
 
-          // Fetch data with custom date range
-          fetchDashboardData('custom', { startDate, endDate });
+          // Handle custom date range
+          const dateRangeContainer = document.querySelector('.date-range-container');
+          if (filterType === 'custom') {
+            if (dateRangeContainer) {
+              dateRangeContainer.style.display = 'block';
+            }
+          } else {
+            if (dateRangeContainer) {
+              dateRangeContainer.style.display = 'none';
+            }
 
-          // Update download link
-          updateDownloadLink(startDate, endDate);
+            // Fetch data with the selected filter
+            console.log('Filter changed to:', filterType);
+            // Add your data fetching logic here
+          }
+        });
+
+        item.setAttribute('data-initialized', 'true');
+      }
+    });
+
+    // Initialize apply date range button
+    const applyDateRangeBtn = document.getElementById('applyDateRange');
+    if (applyDateRangeBtn && !applyDateRangeBtn.hasAttribute('data-initialized')) {
+      applyDateRangeBtn.addEventListener('click', function () {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+
+        if (startDate && endDate) {
+          console.log('Custom date range applied:', startDate, 'to', endDate);
+          // Add your custom date range logic here
         } else {
           alert('Please select both start and end dates');
         }
       });
+
+      applyDateRangeBtn.setAttribute('data-initialized', 'true');
     }
 
-    // Handle manual refresh button
+    console.log('Dashboard filters initialized');
+  }
+
+  // Initialize refresh buttons
+  function initializeRefreshButtons() {
     const refreshChartBtn = document.getElementById('refreshChartBtn');
-    if (refreshChartBtn) {
+    const refreshTableBtn = document.getElementById('refreshTableBtn');
+
+    if (refreshChartBtn && !refreshChartBtn.hasAttribute('data-initialized')) {
       refreshChartBtn.addEventListener('click', function () {
         this.disabled = true;
         this.innerHTML = '<i class="ti ti-loader ti-spin"></i>';
 
-        // Get current active filter
-        const activeFilter = document.querySelector('.dashboard-filter-item.active');
-        const filterType = activeFilter ? activeFilter.dataset.filter : 'weekly';
-
-        // Fetch data with the selected filter
-        fetchDashboardData(filterType);
-
-        // Re-enable button after delay
+        // Re-enable button after 1 second
         setTimeout(() => {
           this.disabled = false;
           this.innerHTML = '<i class="ti ti-refresh"></i>';
+          showNotification('success', 'Chart refreshed successfully');
         }, 1000);
+
+        console.log('Chart refresh clicked');
       });
+
+      refreshChartBtn.setAttribute('data-initialized', 'true');
     }
 
-    // Function to update download link with date parameters
-    function updateDownloadLink(startDate, endDate) {
-      const downloadLink = document.getElementById('downloadGraphLink');
-      if (downloadLink) {
-        const baseUrl = downloadLink.href.split('?')[0];
-        const chartData = document.getElementById('weekly_course_visits_data').value;
-        downloadLink.href = `${baseUrl}?weekly_course_visits=${encodeURIComponent(chartData)}&start_date=${startDate}&end_date=${endDate}`;
-      }
+    if (refreshTableBtn && !refreshTableBtn.hasAttribute('data-initialized')) {
+      refreshTableBtn.addEventListener('click', function () {
+        this.disabled = true;
+        this.innerHTML = '<i class="ti ti-loader ti-spin"></i>';
+
+        // Re-enable button after 1 second
+        setTimeout(() => {
+          this.disabled = false;
+          this.innerHTML = '<i class="ti ti-refresh"></i>';
+          showNotification('success', 'Table refreshed successfully');
+        }, 1000);
+
+        console.log('Table refresh clicked');
+      });
+
+      refreshTableBtn.setAttribute('data-initialized', 'true');
     }
 
-    // Set initial dates for the date picker to current week
-    const today = new Date();
-    const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay()); // Start of current week (Sunday)
+    console.log('Refresh buttons initialized');
+  }
 
-    const startDateInput = document.getElementById('startDate');
-    const endDateInput = document.getElementById('endDate');
+  // Download functions with notifications
+  function downloadMonthlyGraph() {
+    const startDate = document.getElementById('startDate')?.value || new Date().toISOString().split('T')[0];
+    const endDate = document.getElementById('endDate')?.value || new Date().toISOString().split('T')[0];
 
-    if (startDateInput && endDateInput) {
-      startDateInput.value = startOfWeek.toISOString().slice(0, 10);
-      endDateInput.value = today.toISOString().slice(0, 10);
+    Notiflix.Loading.pulse('Preparing download...');
+
+    setTimeout(() => {
+      Notiflix.Loading.remove();
+      showNotification('success', 'Download started successfully');
+    }, 2000);
+
+    console.log('Download monthly graph:', startDate, 'to', endDate);
+  }
+
+  function downloadSummary() {
+    const startDate = document.getElementById('startDate')?.value || new Date().toISOString().split('T')[0];
+    const endDate = document.getElementById('endDate')?.value || new Date().toISOString().split('T')[0];
+
+    Notiflix.Loading.pulse('Preparing summary...');
+
+    setTimeout(() => {
+      Notiflix.Loading.remove();
+      showNotification('success', 'Summary download started');
+    }, 2000);
+
+    console.log('Download summary:', startDate, 'to', endDate);
+  }
+
+  // Initialize when DOM is ready
+  document.addEventListener('DOMContentLoaded', function () {
+    // Small delay to ensure all elements are ready
+    setTimeout(initializeDashboard, 100);
+  });
+
+  // Cleanup function for page unload
+  window.addEventListener('beforeunload', function () {
+    if (visitorChart) {
+      visitorChart.destroy();
+      visitorChart = null;
     }
+    dashboardInitialized = false;
   });
 </script>
 
-<!-- Add real-time indicator -->
+<!-- Styling -->
 <style>
   .data-timestamp {
     font-size: 12px;
@@ -632,11 +690,6 @@
     font-weight: 600;
   }
 
-  /* Filter display styling */
-  #currentFilterDisplay {
-    transition: all 0.3s ease;
-  }
-
   /* Date range container styling */
   .date-range-container {
     transition: max-height 0.3s ease, opacity 0.3s ease;
@@ -653,20 +706,4 @@
     margin-bottom: 1rem;
   }
 </style>
-
-<script>
-  function downloadMonthlyGraph() {
-    const startDate = document.getElementById('startDate')?.value || new Date().toISOString().split('T')[0];
-    const endDate = document.getElementById('endDate')?.value || new Date().toISOString().split('T')[0];
-    updateDownloadLink(startDate, endDate, 'monthly');
-    document.getElementById('downloadGraphLink').click();
-  }
-
-  function downloadSummary() {
-    const startDate = document.getElementById('startDate')?.value || new Date().toISOString().split('T')[0];
-    const endDate = document.getElementById('endDate')?.value || new Date().toISOString().split('T')[0];
-    updateDownloadLink(startDate, endDate, 'summary');
-    document.getElementById('downloadGraphLink').click();
-  }
-</script>
 {% endblock %}

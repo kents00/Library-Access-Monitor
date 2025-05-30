@@ -16437,11 +16437,11 @@ textarea.form-control-lg {
   margin: 0 auto;
   padding: 1.5rem;
   transition: 0.2s ease-in;
-  padding-top: 90px;
+  padding-top: 10px;
 }
 @media (max-width: 991.98px) {
   .body-wrapper .container-fluid, .body-wrapper .container-sm, .body-wrapper .container-md, .body-wrapper .container-lg, .body-wrapper .container-xl, .body-wrapper .container-xxl {
-    padding-top: 160px;
+    padding-top: 10px;
   }
 }
 

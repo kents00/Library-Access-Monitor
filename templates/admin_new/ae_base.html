@@ -41,6 +41,10 @@
                 <span class="hide-menu">Dashboard</span>
               </a>
             </li>
+            <li class="nav-small-cap">
+              <iconify-icon icon="solar:menu-dots-linear" class="nav-small-cap-icon fs-4"></iconify-icon>
+              <span class="hide-menu">Management</span>
+            </li>
             <li class="sidebar-item">
               <a class="sidebar-link primary-hover-bg justify-content-between" href="/admin/manage_students"
                 aria-expanded="false">
@@ -53,13 +57,13 @@
               </a>
             </li>
             <li class="sidebar-item">
-              <a class="sidebar-link primary-hover-bg justify-content-between" href="/admin/manage_admins"
+              <a class="sidebar-link primary-hover-bg justify-content-between" href="/admin/manage_courses"
                 aria-expanded="false">
                 <div class="d-flex align-items-center gap-6">
                   <span class="d-flex">
-                    <iconify-icon icon="solar:shield-user-line-duotone" class=""></iconify-icon>
+                    <iconify-icon icon="solar:book-outline"></iconify-icon>
                   </span>
-                  <span class="hide-menu">User Profile</span>
+                  <span class="hide-menu">Manage Courses</span>
                 </div>
               </a>
             </li>
@@ -71,6 +75,21 @@
                     <iconify-icon icon="solar:bill-list-line-duotone" class=""></iconify-icon>
                   </span>
                   <span class="hide-menu">Download Records</span>
+                </div>
+              </a>
+            </li>
+            <li class="nav-small-cap">
+              <iconify-icon icon="solar:menu-dots-linear" class="nav-small-cap-icon fs-4"></iconify-icon>
+              <span class="hide-menu">Account</span>
+            </li>
+            <li class="sidebar-item">
+              <a class="sidebar-link primary-hover-bg justify-content-between" href="/admin/manage_admins"
+                aria-expanded="false">
+                <div class="d-flex align-items-center gap-6">
+                  <span class="d-flex">
+                    <iconify-icon icon="solar:shield-user-line-duotone" class=""></iconify-icon>
+                  </span>
+                  <span class="hide-menu">Profile Settings</span>
                 </div>
               </a>
             </li>
@@ -124,29 +143,112 @@
       </div>
     </div>
   </div>
+
+  <!-- Core Scripts -->
   <script src="{{ url_for('static', filename='assets/libs/jquery/dist/jquery.min.js') }}"></script>
   <script src="{{ url_for('static', filename='assets/libs/bootstrap/dist/js/bootstrap.bundle.min.js') }}"></script>
   <script src="{{ url_for('static', filename='assets/js/sidebarmenu.js') }}"></script>
   <script src="{{ url_for('static', filename='assets/js/app.min.js') }}"></script>
   <script src="{{ url_for('static', filename='assets/libs/apexcharts/dist/apexcharts.min.js') }}"></script>
   <script src="{{ url_for('static', filename='assets/libs/simplebar/dist/simplebar.js') }}"></script>
+
+  <!-- Notiflix for notifications -->
+  <script src="https://cdn.jsdelivr.net/npm/notiflix@3.2.6/dist/notiflix-aio-3.2.6.min.js"></script>
+
+  <!-- Flash messages handler -->
+  <script>
+    // Configure Notiflix with consistent settings
+    Notiflix.Notify.init({
+      position: 'right-top',
+      timeout: 5000,
+      distance: '10px',
+      opacity: 1,
+      borderRadius: '5px',
+      width: '280px',
+      closeButton: true,
+      clickToClose: true
+    });
+
+    Notiflix.Loading.init({
+      svgColor: '#0D6EFD',
+      messageFontSize: '1rem',
+      backgroundColor: 'rgba(0,0,0,0.8)'
+    });
+
+    // Flash message handler
+    function showNotification(category, message) {
+      switch (category) {
+        case 'success':
+          Notiflix.Notify.success(message);
+          break;
+        case 'error':
+        case 'danger':
+        case 'failure':
+          Notiflix.Notify.failure(message);
+          break;
+        case 'warning':
+          Notiflix.Notify.warning(message);
+          break;
+        case 'info':
+        default:
+          Notiflix.Notify.info(message);
+      }
+    }
+
+    // Process flash messages on page load
+    document.addEventListener('DOMContentLoaded', function () {
+      // Process flash messages from hidden container
+      const flashContainer = document.getElementById('flash-data');
+      if (flashContainer) {
+        const messages = flashContainer.querySelectorAll('.flash-message');
+        messages.forEach(function (messageEl) {
+          const category = messageEl.getAttribute('data-category') || 'info';
+          const message = messageEl.textContent.trim();
+          if (message) {
+            showNotification(category, message);
+          }
+        });
+      }
+
+      // Process Bootstrap alerts and convert to Notiflix
+      const alertElements = document.querySelectorAll('.alert');
+      alertElements.forEach(function (alert) {
+        let category = 'info';
+        if (alert.classList.contains('alert-warning')) category = 'warning';
+        if (alert.classList.contains('alert-danger')) category = 'failure';
+        if (alert.classList.contains('alert-success')) category = 'success';
+
+        const message = alert.textContent.trim();
+        if (message) {
+          showNotification(category, message);
+          alert.style.display = 'none'; // Hide original alert
+        }
+      });
+    });
+  </script>
+
+  <!-- Dashboard specific script -->
   <script src="{{ url_for('static', filename='assets/js/dashboard.js') }}"></script>
+  {% if request.endpoint == 'admin_dashboard' %}
+  <script src="{{ url_for('static', filename='assets/js/dashboard.js') }}"></script>
+  {% endif %}
+
   <!-- Debug panel script -->
   <script src="{{ url_for('static', filename='assets/js/debug-panel.js') }}"></script>
   <!-- solar icons -->
   <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js"></script>
 
-  <!-- Core JavaScript -->
-  <script src="{{ url_for('static', filename='assets/libs/jquery/jquery.min.js') }}"></script>
-  <script src="{{ url_for('static', filename='assets/libs/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
-
   <!-- Custom JavaScript for error handling and element initialization -->
   <script src="{{ url_for('static', filename='assets/js/script.js') }}"></script>
 
-  <!-- Dashboard specific script - only load on dashboard page -->
-  {% if request.endpoint == 'admin_dashboard' %}
-  <script src="{{ url_for('static', filename='assets/js/dashboard.js') }}"></script>
-  {% endif %}
+  <!-- Hidden container for flash messages -->
+  <div id="flash-data" style="display:none;">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+    <div class="flash-message" data-category="{{ category }}">{{ message }}</div>
+    {% endfor %}
+    {% endwith %}
+  </div>
 
   <!-- Custom styles for admin avatar -->
   <style>

@@ -6,7 +6,6 @@ class Course(db.Model):
     course_name = db.Column(db.String(100), nullable=False, unique=True)
     managed_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
-    # Changed from backref to back_populates to match Student model
     students = db.relationship('Student', back_populates='course')
     managed_by = db.relationship('User', foreign_keys=[managed_by_user_id], back_populates='managed_courses')
 

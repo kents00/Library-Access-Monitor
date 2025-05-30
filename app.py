@@ -95,6 +95,16 @@ def admin_dashboard():
         if response.data:
             data = json.loads(response.data)
 
+            # Ensure we have all courses in the chart data
+            if 'weekly_course_visits' not in data or not data['weekly_course_visits']:
+                # Fallback: get all courses from database
+                all_courses = Course.query.all()
+                weekly_course_visits = {}
+                for course in all_courses:
+                    weekly_course_visits[course.course_name] = [0, 0, 0, 0, 0, 0, 0]
+                data['weekly_course_visits'] = weekly_course_visits
+                app.logger.info(f"Added fallback course data for {len(all_courses)} courses")
+
             # Process logged_in_users to make it compatible with the template
             logged_in_users_pairs = []
             if 'logged_in_users' in data:
@@ -119,7 +129,7 @@ def admin_dashboard():
             if 'weekly_course_visits' in data:
                 # Log the data structure before rendering
                 app.logger.debug(f"weekly_course_visits type: {type(data['weekly_course_visits'])}")
-                app.logger.debug(f"weekly_course_visits content sample: {str(data['weekly_course_visits'])[:100]}")
+                app.logger.debug(f"weekly_course_visits courses: {list(data['weekly_course_visits'].keys())}")
 
                 # Make sure it's already a dict (not a string)
                 if isinstance(data['weekly_course_visits'], str):
@@ -138,18 +148,36 @@ def admin_dashboard():
         admin_username = session.get('admin')
         admin = User.query.filter_by(username=admin_username).first()
 
-        # Provide default values for all variables used in the template
+        # Provide default values with actual course names from database
+        try:
+            all_courses = Course.query.all()
+            weekly_course_visits = {}
+            for course in all_courses:
+                weekly_course_visits[course.course_name] = [0, 0, 0, 0, 0, 0, 0]
+
+            if not weekly_course_visits:
+                # Ultimate fallback if no courses in database
+                weekly_course_visits = {
+                    'Information Technology': [0, 0, 0, 0, 0, 0, 0],
+                    'Marine Biology': [0, 0, 0, 0, 0, 0, 0],
+                    'Home Economics': [0, 0, 0, 0, 0, 0, 0],
+                    'Industrial Arts': [0, 0, 0, 0, 0, 0, 0],
+                }
+        except Exception as course_error:
+            app.logger.error(f"Error fetching courses for fallback: {str(course_error)}")
+            weekly_course_visits = {
+                'Information Technology': [0, 0, 0, 0, 0, 0, 0],
+                'Marine Biology': [0, 0, 0, 0, 0, 0, 0],
+                'Home Economics': [0, 0, 0, 0, 0, 0, 0],
+                'Industrial Arts': [0, 0, 0, 0, 0, 0, 0],
+            }
+
         default_data = {
             'place_visits': [],
             'total_visitors': 0,
             'logged_in_users': [],
             'monthly_course_visits': {},
-            'weekly_course_visits': {
-                'Information Technology': [0] * 7,
-                'Marine Biology': [0] * 7,
-                'Home Economics': [0] * 7,
-                'Industrial Arts': [0] * 7,
-            },
+            'weekly_course_visits': weekly_course_visits,
             'weekly_place_visits': [],
             'monthly_place_visits': [],
             'top_weekly_places': [],
@@ -649,6 +677,57 @@ def manage_admins():
         app.logger.error(f"Error loading admin data: {str(e)}")
         flash(f"Error loading admin data: {str(e)}", 'danger')
         return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/manage_courses', methods=['GET', 'POST'])
+def manage_courses():
+    if 'admin' not in session:
+        flash('Unauthorized access!')
+        return redirect(url_for('admin_login'))
+
+    # Forward to API endpoint
+    test_client = app.test_client()
+    with test_client.session_transaction() as test_session:
+        test_session['admin'] = session.get('admin')
+        test_session['admin_image'] = session.get('admin_image')
+
+    if request.method == 'POST':
+        response = test_client.post('/api/admin/manage_courses', data=request.form, content_type='application/x-www-form-urlencoded')
+        return response.data
+    else:
+        response = test_client.get('/api/admin/manage_courses')
+        return response.data
+
+@app.route('/admin/edit_course/<int:course_id>', methods=['GET', 'POST'])
+def edit_course(course_id):
+    if 'admin' not in session:
+        flash('Unauthorized access!')
+        return redirect(url_for('admin_login'))
+
+    # Forward to API endpoint
+    test_client = app.test_client()
+    with test_client.session_transaction() as test_session:
+        test_session['admin'] = session.get('admin')
+        test_session['admin_image'] = session.get('admin_image')
+
+    if request.method == 'POST':
+        response = test_client.post(f'/api/admin/edit_course/{course_id}', data=request.form, content_type='application/x-www-form-urlencoded')
+        return response.data
+    else:
+        response = test_client.get(f'/api/admin/edit_course/{course_id}')
+        return response.data
+
+@app.route('/admin/delete_course/<int:course_id>', methods=['DELETE'])
+def delete_course(course_id):
+    if 'admin' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized access'}), 403
+
+    # Forward to API endpoint
+    test_client = app.test_client()
+    with test_client.session_transaction() as test_session:
+        test_session['admin'] = session.get('admin')
+
+    response = test_client.delete(f'/api/admin/delete_course/{course_id}')
+    return response.data
 
 if __name__ == '__main__':
     app.run(host=app.config['HOST'], port=app.config['PORT'], debug=app.config['DEBUG'], secret_key=app.config['SECRET_KEY'])

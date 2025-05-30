@@ -305,11 +305,7 @@
       const confirmPassword = document.getElementById('confirm_password').value;
 
       if (password !== confirmPassword) {
-        if (typeof Notiflix !== 'undefined') {
-          Notiflix.Notify.failure('Passwords do not match!');
-        } else {
-          alert('Passwords do not match!');
-        }
+        showNotification('failure', 'Passwords do not match!');
         return;
       }
 
@@ -321,11 +317,7 @@
 
       if (!locationId && (newBarangay || newMunicipality || newProvince)) {
         if (!newBarangay || !newMunicipality || !newProvince) {
-          if (typeof Notiflix !== 'undefined') {
-            Notiflix.Notify.warning('Please fill in all location fields or select an existing location.');
-          } else {
-            alert('Please fill in all location fields (Barangay, Municipality, Province) or select an existing location.');
-          }
+          showNotification('warning', 'Please fill in all location fields or select an existing location.');
           return;
         }
 
@@ -381,9 +373,7 @@
     }
 
     function submitAdminForm() {
-      if (typeof Notiflix !== 'undefined') {
-        Notiflix.Loading.standard('Saving...');
-      }
+      Notiflix.Loading.standard('Saving...');
 
       const formData = new FormData(document.getElementById('adminForm'));
 
@@ -393,35 +383,20 @@
       })
         .then(response => response.json())
         .then(data => {
-          if (typeof Notiflix !== 'undefined') {
-            Notiflix.Loading.remove();
-          }
+          Notiflix.Loading.remove();
 
           if (data.success) {
-            if (typeof Notiflix !== 'undefined') {
-              Notiflix.Notify.success(data.message);
-            } else {
-              alert(data.message);
-            }
-
+            showNotification('success', data.message);
             if (!document.getElementById('adminId').value) {
               resetForm();
             }
           } else {
-            if (typeof Notiflix !== 'undefined') {
-              Notiflix.Notify.failure('Error: ' + data.message);
-            } else {
-              alert('Error: ' + data.message);
-            }
+            showNotification('failure', 'Error: ' + data.message);
           }
         })
         .catch(error => {
-          if (typeof Notiflix !== 'undefined') {
-            Notiflix.Loading.remove();
-            Notiflix.Notify.failure('An error occurred while processing your request.');
-          } else {
-            alert('An error occurred while processing your request.');
-          }
+          Notiflix.Loading.remove();
+          showNotification('failure', 'An error occurred while processing your request.');
           console.error('Error:', error);
         });
     }
