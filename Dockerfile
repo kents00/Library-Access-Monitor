@@ -32,6 +32,8 @@ RUN mkdir -p static/uploads
 ENV FLASK_APP=app.py
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV HOST=0.0.0.0
+ENV PORT=5000
 
 # Expose the port the app runs on
 EXPOSE 5000

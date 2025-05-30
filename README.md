@@ -324,7 +324,7 @@ python -c "from models import db; db.create_all()"
 
 ## 🚀 Recent Updates
 
-### Version 2.0.0 Features
+### Version 2.1.0 Features
 - ✅ **Modern Admin Interface**: Complete UI overhaul with responsive design
 - ✅ **Interactive Dashboard**: Real-time charts and analytics
 - ✅ **Flash Message System**: Consistent notifications across all pages
