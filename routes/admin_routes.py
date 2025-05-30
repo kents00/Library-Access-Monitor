@@ -4,7 +4,12 @@ from datetime import datetime, timedelta
 import json
 import io
 import matplotlib.pyplot as plt
-from flask import redirect, url_for, flash, session, current_app, request, jsonify, send_file
+import random
+import string
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from flask import redirect, url_for, flash, session, current_app, request, jsonify, send_file, render_template
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
@@ -17,6 +22,14 @@ from models.student import Student
 from models.attendance import Attendance
 from models.location import Location
 from utils.export import export_attendance_csv, export_attendance_pdf
+from utils.email_verification import (
+    generate_verification_code,
+    send_verification_email,
+    store_verification_code,
+    verify_code,
+    cleanup_verification_code,
+    is_verification_valid
+)
 
 def allowed_file(filename):
     allowed_extensions = {'gif', 'png', 'jpg', 'jpeg', 'bmp', 'webp', 'avif'}
@@ -273,17 +286,30 @@ def admin_login():
             # Also store the admin image in session if available
             if hasattr(user, 'image') and user.image:
                 session['admin_image'] = user.image
-            return jsonify({
-                'success': True,
-                'message': 'Admin logged in successfully!'
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'message': 'Invalid username or password.'
-            })
 
-    return jsonify({'success': True})
+            # Check if this is an AJAX request
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({
+                    'success': True,
+                    'message': 'Admin logged in successfully!'
+                })
+            else:
+                # Regular form submission - redirect to dashboard
+                flash('Login successful!', 'success')
+                return redirect(url_for('admin_dashboard'))
+        else:
+            # Check if this is an AJAX request
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({
+                    'success': False,
+                    'message': 'Invalid username or password.'
+                })
+            else:
+                # Regular form submission - show error and return template
+                flash('Invalid username or password.', 'error')
+                return render_template('admin_new/ae_login.html')
+
+    return render_template('admin_new/ae_login.html')
 
 @admin_bp.route('/admin/logout')
 def admin_logout():
@@ -517,29 +543,104 @@ def download_records():
         flash('Unauthorized access! Admins only.')
         return redirect(url_for('admin_login'))
 
-@admin_bp.route('/api/locations', methods=['GET'])
-@admin_required
+# Move this to be a standalone function that can be imported
+def get_all_locations():
+    """Get all locations - utility function"""
+    try:
+        locations = Location.query.all()
+        location_data = [
+            {
+                'id': loc.id,
+                'barangay': loc.barangay,
+                'municipality': loc.municipality,
+                'province': loc.province
+            }
+            for loc in locations
+        ]
+        return location_data
+    except Exception as e:
+        current_app.logger.error(f"Error getting locations: {str(e)}")
+        return []
+
+@admin_bp.route('/api/locations', methods=['GET', 'POST'])
 def get_locations():
-    province = request.args.get('province', '')
-    municipality = request.args.get('municipality', '')
+    """Get all locations or create a new location"""
+    if request.method == 'POST':
+        try:
+            data = request.get_json()
+            barangay = data.get('barangay')
+            municipality = data.get('municipality')
+            province = data.get('province')
 
-    filters = {}
-    if province:
-        filters['province'] = province
-    if municipality:
-        filters['municipality'] = municipality
+            if not all([barangay, municipality, province]):
+                return jsonify({'success': False, 'message': 'All location fields are required'}), 400
 
-    locations = Location.query.filter_by(**filters).all()
+            # Check if location already exists
+            existing_location = Location.query.filter_by(
+                barangay=barangay,
+                municipality=municipality,
+                province=province
+            ).first()
 
-    location_data = [
-        {
-            'barangay': loc.barangay,
-            'municipality': loc.municipality,
-            'province': loc.province
-        }
-        for loc in locations
-    ]
-    return jsonify(location_data)
+            if existing_location:
+                return jsonify({
+                    'success': True,
+                    'location_id': existing_location.id,
+                    'message': 'Location already exists'
+                })
+
+            # Create new location
+            new_location = Location(
+                barangay=barangay,
+                municipality=municipality,
+                province=province
+            )
+            db.session.add(new_location)
+            db.session.commit()
+
+            return jsonify({
+                'success': True,
+                'location_id': new_location.id,
+                'message': 'Location created successfully'
+            })
+
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error creating location: {str(e)}")
+            return jsonify({'success': False, 'message': f'Error creating location: {str(e)}'}), 500
+
+    else:  # GET request
+        try:
+            province = request.args.get('province', '')
+            municipality = request.args.get('municipality', '')
+
+            filters = {}
+            if province:
+                filters['province'] = province
+            if municipality:
+                filters['municipality'] = municipality
+
+            locations = Location.query.filter_by(**filters).all()
+
+            location_data = [
+                {
+                    'id': loc.id,
+                    'barangay': loc.barangay,
+                    'municipality': loc.municipality,
+                    'province': loc.province
+                }
+                for loc in locations
+            ]
+            return jsonify(location_data)
+        except Exception as e:
+            current_app.logger.error(f"Error getting locations: {str(e)}")
+            return jsonify({'error': 'Failed to fetch locations'}), 500
+
+@admin_bp.route('/admin/api/locations', methods=['GET'])
+@admin_required
+def get_admin_locations():
+    """Admin-only endpoint for locations with additional filtering"""
+    return get_locations()  # Reuse the same logic
 
 @admin_bp.route('/download_graph', methods=['GET', 'POST'])
 @admin_required
@@ -575,11 +676,28 @@ def manage_admins():
         if request.method == 'POST':
             admin_id = request.form.get('adminId')
             username = request.form.get('username')
+            email = request.form.get('email')
+            first_name = request.form.get('first_name')
+            last_name = request.form.get('last_name')
+            phone = request.form.get('phone')
             password = request.form.get('password')
             confirm_password = request.form.get('confirm_password')
-            image_file = request.files.get('profile_image')
+            location_id = request.form.get('location_id')
 
-            if password != confirm_password:
+            # Enhanced image file handling with multiple safety checks
+            image_file = None
+            if request.files and 'profile_image' in request.files:
+                uploaded_file = request.files['profile_image']
+                # Multiple checks: file exists, has filename, and filename is not empty
+                if uploaded_file and hasattr(uploaded_file, 'filename') and uploaded_file.filename and uploaded_file.filename.strip():
+                    image_file = uploaded_file
+                    current_app.logger.debug(f"Image file selected: {image_file.filename}")
+                else:
+                    current_app.logger.debug("No valid image file selected")
+            else:
+                current_app.logger.debug("No image file in request")
+
+            if password and password != confirm_password:
                 return jsonify({'success': False, 'message': 'Passwords do not match!'})
 
             try:
@@ -587,41 +705,359 @@ def manage_admins():
                     admin = User.query.get(admin_id)
                     if admin:
                         admin.username = username
-                        admin.password = generate_password_hash(password)
-                        if image_file and allowed_file(image_file.filename):
-                            filename = secure_filename(image_file.filename)
-                            image_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-                            image_file.save(image_path)
-                            admin.image = filename
+                        admin.email = email
+                        admin.first_name = first_name
+                        admin.last_name = last_name
+                        admin.phone = phone
+                        admin.location_id = location_id
+                        if password:  # Only update password if provided
+                            admin.password = generate_password_hash(password)
+
+                        # Handle image upload with comprehensive error checking
+                        if image_file:
+                            try:
+                                if allowed_file(image_file.filename):
+                                    filename = secure_filename(image_file.filename)
+
+                                    # Ensure upload folder exists
+                                    uploads_dir = current_app.config.get('UPLOAD_FOLDER', 'static/uploads')
+                                    if not os.path.exists(uploads_dir):
+                                        os.makedirs(uploads_dir)
+
+                                    image_path = os.path.join(uploads_dir, filename)
+                                    image_file.save(image_path)
+                                    admin.image = filename
+                                    current_app.logger.info(f"Successfully saved image: {filename}")
+                                else:
+                                    current_app.logger.warning(f"Invalid file type: {image_file.filename}")
+                                    return jsonify({'success': False, 'message': 'Invalid file type. Please use a valid image format.'})
+                            except Exception as e:
+                                current_app.logger.error(f"Error saving image: {str(e)}")
+                                return jsonify({'success': False, 'message': f'Error saving image: {str(e)}'})
+
                         db.session.commit()
-                        flash('Admin updated successfully!', 'success')
+                        return jsonify({'success': True, 'message': 'Admin updated successfully!'})
                     else:
-                        flash('Admin not found!', 'danger')
+                        return jsonify({'success': False, 'message': 'Admin not found!'})
                 else:
+                    # Create new admin
+                    # Check if username or email already exists
+                    existing_user = User.query.filter(
+                        (User.username == username) | (User.email == email)
+                    ).first()
+
+                    if existing_user:
+                        return jsonify({'success': False, 'message': 'Username or email already exists!'})
+
+                    # Set default image
+                    filename = 'admin_default.jpg'
+
+                    # Handle image upload for new admin
+                    if image_file:
+                        try:
+                            if allowed_file(image_file.filename):
+                                filename = secure_filename(image_file.filename)
+
+                                # Ensure upload folder exists
+                                uploads_dir = current_app.config.get('UPLOAD_FOLDER', 'static/uploads')
+                                if not os.path.exists(uploads_dir):
+                                    os.makedirs(uploads_dir)
+
+                                image_path = os.path.join(uploads_dir, filename)
+                                image_file.save(image_path)
+                                current_app.logger.info(f"Successfully saved new admin image: {filename}")
+                            else:
+                                current_app.logger.warning(f"Invalid file type for new admin: {image_file.filename}")
+                                # Continue with default image
+                                filename = 'admin_default.jpg'
+                        except Exception as e:
+                            current_app.logger.error(f"Error saving new admin image: {str(e)}")
+                            # Continue with default image if upload fails
+                            filename = 'admin_default.jpg'
+
                     new_admin = User(
                         username=username,
+                        email=email,
+                        first_name=first_name,
+                        last_name=last_name,
+                        phone=phone,
                         password=generate_password_hash(password),
-                        role='admin'
+                        role='admin',
+                        location_id=location_id,
+                        image=filename
                     )
-                    if image_file and allowed_file(image_file.filename):
-                        filename = secure_filename(image_file.filename)
-                        image_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-                        image_file.save(image_path)
-                        new_admin.image = filename
                     db.session.add(new_admin)
                     db.session.commit()
-                    flash('Admin registered successfully!', 'success')
+                    return jsonify({'success': True, 'message': 'Admin registered successfully!'})
+
+            except sqlalchemy.exc.IntegrityError as e:
+                db.session.rollback()
+                return jsonify({'success': False, 'message': 'Username or email already exists!'})
             except sqlalchemy.exc.OperationalError as e:
                 db.session.rollback()
                 return jsonify({'success': False, 'message': 'Database error: Unable to save changes. Please try again later.'})
+            except Exception as e:
+                db.session.rollback()
+                return jsonify({'success': False, 'message': f'Error: {str(e)}'})
 
-            return jsonify({'success': True, 'message': 'Admin settings updated successfully!'})
+        # For GET requests, return admin data and locations for the form
+        admin_username = session.get('admin')
+        current_admin = User.query.filter_by(username=admin_username, role='admin').first()
+        locations = Location.query.all()
 
-        # For GET requests, this data will be handled by the app route
-        return jsonify({'success': True})
+        return jsonify({
+            'success': True,
+            'admin': current_admin.to_dict() if current_admin else None,
+            'locations': [location.to_dict() for location in locations]
+        })
     else:
         return jsonify({'success': False, 'message': 'Unauthorized access!'})
+
+@admin_bp.route('/admin/user_management', methods=['GET', 'POST'])
+@admin_required
+def user_management():
+    """Allow users to manage their assigned students, courses, and locations"""
+    if 'admin' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized access'}), 403
+
+    # Get current admin user
+    admin_username = session.get('admin')
+    current_user = User.query.filter_by(username=admin_username, role='admin').first()
+
+    if not current_user:
+        return jsonify({'success': False, 'message': 'Admin user not found'}), 404
+
+    if request.method == 'POST':
+        action = request.form.get('action')
+
+        if action == 'assign_student':
+            student_id = request.form.get('student_id')
+            student = Student.query.get(student_id)
+            if student:
+                student.managed_by_user_id = current_user.id
+                db.session.commit()
+                return jsonify({'success': True, 'message': 'Student assigned successfully'})
+
+        elif action == 'assign_course':
+            course_id = request.form.get('course_id')
+            course = Course.query.get(course_id)
+            if course:
+                course.managed_by_user_id = current_user.id
+                db.session.commit()
+                return jsonify({'success': True, 'message': 'Course assigned successfully'})
+
+    # Get data for GET requests
+    managed_students = Student.query.filter_by(managed_by_user_id=current_user.id).all()
+    managed_courses = Course.query.filter_by(managed_by_user_id=current_user.id).all()
+    unassigned_students = Student.query.filter_by(managed_by_user_id=None).all()
+    unassigned_courses = Course.query.filter_by(managed_by_user_id=None).all()
+
+    return jsonify({
+        'success': True,
+        'managed_students': [student.to_dict() for student in managed_students],
+        'managed_courses': [course.to_dict() for course in managed_courses],
+        'unassigned_students': [student.to_dict() for student in unassigned_students],
+        'unassigned_courses': [course.to_dict() for course in unassigned_courses]
+    })
+
+@admin_bp.route('/admin/edit_managed_student/<student_id>', methods=['POST'])
+@admin_required
+def edit_managed_student(student_id):
+    """Allow user to edit students they manage"""
+    if 'admin' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized access'}), 403
+
+    admin_username = session.get('admin')
+    current_user = User.query.filter_by(username=admin_username, role='admin').first()
+
+    student = Student.query.filter_by(id=student_id, managed_by_user_id=current_user.id).first()
+    if not student:
+        return jsonify({'success': False, 'message': 'Student not found or not managed by you'}), 404
+
+    try:
+        student.first_name = request.form.get('first_name', student.first_name)
+        student.middle_name = request.form.get('middle_name', student.middle_name)
+        student.last_name = request.form.get('last_name', student.last_name)
+        student.age = request.form.get('age', student.age)
+
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Student updated successfully', 'student': student.to_dict()})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Error updating student: {str(e)}'}), 500
 
 @admin_bp.route('/test', methods=['GET'])
 def test_endpoint():
     return jsonify({"message": "Admin blueprint is working correctly!"})
+
+# Password reset routes
+@admin_bp.route('/admin/forgot-password', methods=['GET', 'POST'])
+def admin_forgot_password():
+    if request.method == 'POST':
+        email = request.form.get('email')
+
+        if not email:
+            flash('Please enter your email address.', 'warning')
+            return render_template('admin_new/ae_forgot_password.html')
+
+        # Check if admin with this email exists
+        admin = User.query.filter_by(email=email, role='admin').first()
+
+        if not admin:
+            flash('No admin account found with this email address.', 'danger')
+            return render_template('admin_new/ae_forgot_password.html')
+
+        # Generate verification code
+        verification_code = generate_verification_code()
+
+        # Store code with timestamp
+        store_verification_code(email, verification_code)
+
+        # Send email
+        email_sent = send_verification_email(email, verification_code)
+
+        if email_sent:
+            # Check if we have proper email configuration
+            if current_app.config.get('MAIL_USERNAME') and current_app.config.get('MAIL_PASSWORD'):
+                flash('Verification code sent to your email address. Please check your inbox.', 'success')
+            else:
+                # In development without email config, show the code
+                if current_app.config.get('DEBUG', False):
+                    flash(f'DEBUG MODE: Email not configured. Your verification code is: {verification_code}', 'info')
+                else:
+                    flash('Email service not configured. Please contact system administrator.', 'warning')
+
+            return redirect(url_for('admin.admin_verify_code', email=email))
+        else:
+            flash('Failed to send verification code. Please try again later or contact support.', 'danger')
+            return render_template('admin_new/ae_forgot_password.html')
+
+    return render_template('admin_new/ae_forgot_password.html')
+
+@admin_bp.route('/admin/verify-code')
+def admin_verify_code():
+    email = request.args.get('email')
+    if not email:
+        flash('Invalid request.', 'danger')
+        return redirect(url_for('admin.admin_forgot_password'))
+
+    return render_template('admin_new/ae_verify_code.html', email=email)
+
+@admin_bp.route('/admin/verify-code', methods=['POST'])
+def admin_verify_code_post():
+    email = request.form.get('email')
+
+    # Get individual code digits and combine them
+    code_digits = []
+    for i in range(1, 7):
+        digit = request.form.get(f'code{i}', '')
+        code_digits.append(digit)
+
+    # Also check for the full code (fallback)
+    entered_code = request.form.get('verification_code', ''.join(code_digits))
+
+    if not email or not entered_code:
+        flash('Please enter the complete verification code.', 'warning')
+        return render_template('admin_new/ae_verify_code.html', email=email)
+
+    # Verify the code using the utility function
+    is_valid, message = verify_code(email, entered_code)
+
+    if is_valid:
+        # Code is correct, redirect to password reset
+        return redirect(url_for('admin.admin_reset_password', email=email))
+    else:
+        flash(message, 'warning' if 'remaining' in message else 'danger')
+        if 'request a new' in message:
+            return redirect(url_for('admin.admin_forgot_password'))
+        return render_template('admin_new/ae_verify_code.html', email=email)
+
+@admin_bp.route('/admin/resend-code', methods=['POST'])
+def admin_resend_code():
+    try:
+        data = request.get_json()
+        email = data.get('email')
+
+        if not email:
+            return jsonify({'success': False, 'message': 'Email is required'})
+
+        # Check if admin exists
+        admin = User.query.filter_by(email=email, role='admin').first()
+        if not admin:
+            return jsonify({'success': False, 'message': 'Invalid email address'})
+
+        # Generate new verification code
+        verification_code = generate_verification_code()
+
+        # Store the new code
+        store_verification_code(email, verification_code)
+
+        # Send email
+        if send_verification_email(email, verification_code):
+            return jsonify({'success': True, 'message': 'Verification code resent successfully'})
+        else:
+            return jsonify({'success': False, 'message': 'Failed to send verification code'})
+
+    except Exception as e:
+        current_app.logger.error(f"Error resending code: {str(e)}")
+        return jsonify({'success': False, 'message': 'An error occurred'})
+
+@admin_bp.route('/admin/reset-password')
+def admin_reset_password():
+    email = request.args.get('email')
+    if not email:
+        flash('Invalid request.', 'danger')
+        return redirect(url_for('admin.admin_forgot_password'))
+
+    # Verify that the user completed the verification process
+    if not is_verification_valid(email):
+        flash('Session expired. Please start the password reset process again.', 'danger')
+        return redirect(url_for('admin.admin_forgot_password'))
+
+    return render_template('admin_new/ae_reset_password.html', email=email)
+
+@admin_bp.route('/admin/reset-password', methods=['POST'])
+def admin_reset_password_post():
+    email = request.form.get('email')
+    password = request.form.get('password')
+    confirm_password = request.form.get('confirm_password')
+
+    if not all([email, password, confirm_password]):
+        flash('All fields are required.', 'warning')
+        return render_template('admin_new/ae_reset_password.html', email=email)
+
+    if password != confirm_password:
+        flash('Passwords do not match.', 'warning')
+        return render_template('admin_new/ae_reset_password.html', email=email)
+
+    if len(password) < 6:
+        flash('Password must be at least 6 characters long.', 'warning')
+        return render_template('admin_new/ae_reset_password.html', email=email)
+
+    # Verify session is still valid
+    if not is_verification_valid(email):
+        flash('Session expired. Please start the password reset process again.', 'danger')
+        return redirect(url_for('admin.admin_forgot_password'))
+
+    try:
+        # Find and update admin password
+        admin = User.query.filter_by(email=email, role='admin').first()
+        if not admin:
+            flash('Admin account not found.', 'danger')
+            return redirect(url_for('admin.admin_forgot_password'))
+
+        # Update password
+        admin.password = generate_password_hash(password)
+        db.session.commit()
+
+        # Clean up verification code
+        cleanup_verification_code(email)
+
+        flash('Password reset successfully. You can now log in with your new password.', 'success')
+        return redirect(url_for('admin.admin_login'))
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error resetting password: {str(e)}")
+        flash('An error occurred while resetting your password. Please try again.', 'danger')
+        return render_template('admin_new/ae_reset_password.html', email=email)

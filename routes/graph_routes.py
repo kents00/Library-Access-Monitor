@@ -1,4 +1,5 @@
 from flask import Blueprint, request, current_app, jsonify
+import json
 from utils.graph_export import (
     generate_visitor_statistics_graph,
     generate_visitor_comparison_graph,

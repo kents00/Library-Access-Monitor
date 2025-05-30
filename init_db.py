@@ -25,10 +25,25 @@ def init_database(app=None):
         # Create default admin user if not exists
         admin = User.query.filter_by(role='admin').first()
         if not admin:
+            # Create a default location for the admin user
+            admin_location = Location(
+                barangay="Admin District",
+                municipality="Jimenez",
+                province="Misamis Occidental"
+            )
+            db.session.add(admin_location)
+            db.session.commit()  # Commit to get location ID
+
             admin = User(
                 username='ustplibrary',
+                email='admin@ustplibrary.edu.ph',
+                first_name='Library',
+                last_name='Administrator',
+                phone='09123456789',
                 password=generate_password_hash('ustplibrary@2025'),
-                role='admin'
+                role='admin',
+                location_id=admin_location.id,
+                image='uploads/default_image.jpg'
             )
             db.session.add(admin)
 
@@ -42,6 +57,12 @@ def init_database(app=None):
             ]
             db.session.add_all(courses)
             db.session.commit()  # Commit to generate course IDs
+
+            # Assign the admin user to manage some courses
+            admin_user = User.query.filter_by(username='ustplibrary').first()
+            if admin_user:
+                for course in courses[:2]:  # Assign first 2 courses to admin
+                    course.managed_by_user_id = admin_user.id
 
         # Create locations for student records with better dummy names
         locations = [
@@ -126,12 +147,13 @@ def init_database(app=None):
                     age=student_data["age"],
                     location_id=student_data["location_id"],
                     course_id=student_data["course_id"],
-                    image=student_data["image"]
+                    image=student_data["image"],
+                    managed_by_user_id=admin.id if admin else None  # Assign students to admin
                 )
                 db.session.add(student)
 
         db.session.commit()
-        print("Database initialized successfully with default users!")
+        print("Database initialized successfully with default users and relationships!")
 
         # Ensure the uploads directory exists
         uploads_dir = os.path.join(app.static_folder, 'uploads')

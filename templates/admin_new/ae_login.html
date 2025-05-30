@@ -25,7 +25,7 @@
                   <img src="{{ url_for('static', filename='assets/images/logos/logo.svg') }}" alt="">
                 </a>
                 <p class="text-center">Library Access Monitor Admin</p>
-                <form method="POST" action="{{ url_for('admin_login') }}">
+                <form method="POST" action="{{ url_for('admin.admin_login') }}">
                   <div class="mb-3">
                     <label for="username" class="form-label">Username</label>
                     <input type="text" class="form-control" id="username" name="username"
@@ -37,9 +37,8 @@
                       placeholder="Enter your password">
                   </div>
                   <div class="d-flex align-items-center justify-content-between mb-4">
-                    <a class="text-primary fw-bold"
-                      href="mailto:kentedoloverio24@gmail.com?subject=Reset Password [ USTP Library ]">Forgot Password
-                      ?</a>
+                    <a class="text-primary fw-bold" href="{{ url_for('admin.admin_forgot_password') }}">Forgot
+                      Password?</a>
                   </div>
                   <button type="submit" class="btn btn-primary w-100 py-8 fs-4 mb-4">Login</button>
                 </form>
@@ -123,10 +122,8 @@
         });
       }
 
-      // Add loading indicator to login form
-      document.querySelector('form').addEventListener('submit', function () {
-        showLoading('Logging in...');
-      });
+      // Remove the form submit event listener that was adding loading indicator
+      // Let the form submit naturally for redirect functionality
     });
 
     /**

@@ -178,10 +178,16 @@ def admin_login():
 
         if user and check_password_hash(user.password, password):
             session['admin'] = username
+            # Also store the admin image in session if available
+            if hasattr(user, 'image') and user.image:
+                session['admin_image'] = user.image
+
+            flash('Login successful!', 'success')
             return redirect(url_for('admin_dashboard'))
         else:
             # Pass error to template to be displayed with Notiflix
-            return render_template('admin_new/ae_login.html', error='Invalid username or password.')
+            flash('Invalid username or password.', 'error')
+            return render_template('admin_new/ae_login.html')
 
     return render_template('admin_new/ae_login.html')
 
@@ -424,11 +430,32 @@ def download_records():
 
 @app.route('/api/locations', methods=['GET'])
 def get_locations():
-    if 'admin' not in session:
-        return jsonify({'success': False, 'message': 'Unauthorized access'}), 403
+    """Get all locations - accessible for forms"""
+    try:
+        province = request.args.get('province', '')
+        municipality = request.args.get('municipality', '')
 
-    response = admin_bp.get_locations()
-    return response
+        filters = {}
+        if province:
+            filters['province'] = province
+        if municipality:
+            filters['municipality'] = municipality
+
+        locations = Location.query.filter_by(**filters).all()
+
+        location_data = [
+            {
+                'id': loc.id,
+                'barangay': loc.barangay,
+                'municipality': loc.municipality,
+                'province': loc.province
+            }
+            for loc in locations
+        ]
+        return jsonify(location_data)
+    except Exception as e:
+        app.logger.error(f"Error getting locations: {str(e)}")
+        return jsonify({'error': 'Failed to fetch locations'}), 500
 
 @app.route('/download_graph')
 def download_graph():
@@ -463,58 +490,165 @@ def manage_admins():
 
     if request.method == 'POST':
         try:
-            # Create a new test client for the request
-            test_client = app.test_client()
+            # Handle form data directly instead of using test client
+            admin_id = request.form.get('adminId')
+            username = request.form.get('username')
+            email = request.form.get('email')
+            first_name = request.form.get('first_name')
+            last_name = request.form.get('last_name')
+            phone = request.form.get('phone')
+            password = request.form.get('password')
+            confirm_password = request.form.get('confirm_password')
+            location_id = request.form.get('location_id')
 
-            # Common form data
-            form_data = {key: request.form[key] for key in request.form}
+            # Enhanced image file handling with multiple safety checks
+            image_file = None
+            if request.files and 'profile_image' in request.files:
+                uploaded_file = request.files['profile_image']
+                # Multiple checks: file exists, has filename, and filename is not empty
+                if uploaded_file and hasattr(uploaded_file, 'filename') and uploaded_file.filename and uploaded_file.filename.strip():
+                    image_file = uploaded_file
+                    app.logger.debug(f"Image file selected: {image_file.filename}")
+                else:
+                    app.logger.debug("No valid image file selected")
+            else:
+                app.logger.debug("No image file in request")
 
-            # Handle the API request first (without file)
-            response = test_client.post(
-                '/api/admin/manage_admins',
-                data=form_data,
-                content_type='multipart/form-data'
-            )
+            # Validate passwords
+            if password and password != confirm_password:
+                return jsonify({'success': False, 'message': 'Passwords do not match!'})
 
-            # Process file upload separately if a file was provided
-            if 'profile_image' in request.files and request.files['profile_image'].filename:
-                from werkzeug.utils import secure_filename
-                import os
+            # Get current admin for session validation
+            admin_username = session.get('admin')
+            current_admin = User.query.filter_by(username=admin_username, role='admin').first()
 
-                # Create uploads directory if it doesn't exist
-                uploads_dir = os.path.join(app.static_folder, 'uploads')
-                if not os.path.exists(uploads_dir):
-                    os.makedirs(uploads_dir)
+            if not current_admin:
+                return jsonify({'success': False, 'message': 'Admin session invalid!'})
 
-                admin_id = request.form.get('adminId')
-                image_file = request.files['profile_image']
-                filename = secure_filename(image_file.filename)
-                image_path = os.path.join(uploads_dir, filename)
-                image_file.save(image_path)
+            try:
+                if admin_id:
+                    # Update existing admin
+                    admin = User.query.get(admin_id)
+                    if not admin:
+                        return jsonify({'success': False, 'message': 'Admin not found!'})
 
-                # Update the admin's image in the database
-                admin = User.query.get(admin_id) if admin_id else User.query.filter_by(role='admin').first()
-                if admin:
-                    admin.image = filename
+                    admin.username = username
+                    admin.email = email
+                    admin.first_name = first_name
+                    admin.last_name = last_name
+                    admin.phone = phone
+                    admin.location_id = location_id
+
+                    if password:  # Only update password if provided
+                        admin.password = generate_password_hash(password)
+
+                    # Handle image upload with comprehensive error checking
+                    if image_file:
+                        try:
+                            if allowed_file(image_file.filename):
+                                from werkzeug.utils import secure_filename
+                                import os
+
+                                filename = secure_filename(image_file.filename)
+                                uploads_dir = os.path.join(app.static_folder, 'uploads')
+
+                                # Ensure uploads directory exists
+                                if not os.path.exists(uploads_dir):
+                                    os.makedirs(uploads_dir)
+                                    app.logger.info(f"Created uploads directory: {uploads_dir}")
+
+                                image_path = os.path.join(uploads_dir, filename)
+                                image_file.save(image_path)
+                                admin.image = filename
+                                app.logger.info(f"Successfully saved image: {filename}")
+                            else:
+                                app.logger.warning(f"Invalid file type: {image_file.filename}")
+                                return jsonify({'success': False, 'message': 'Invalid file type. Please use a valid image format.'})
+                        except Exception as e:
+                            app.logger.error(f"Error saving image: {str(e)}")
+                            return jsonify({'success': False, 'message': f'Error saving image: {str(e)}'})
+
                     db.session.commit()
-                    app.logger.info(f"Updated admin image: {filename}")
+                    return jsonify({'success': True, 'message': 'Admin updated successfully!'})
+                else:
+                    # Create new admin
+                    existing_user = User.query.filter(
+                        (User.username == username) | (User.email == email)
+                    ).first()
 
-            # Process the response
-            data = response.get_json() if hasattr(response, 'get_json') else {}
+                    if existing_user:
+                        return jsonify({'success': False, 'message': 'Username or email already exists!'})
 
-            if data.get('success'):
-                flash('Admin settings updated successfully!', 'success')
-            elif 'message' in data:
-                flash(data['message'], 'danger')
+                    # Set default image
+                    filename = 'admin_default.jpg'
+
+                    # Handle image upload for new admin
+                    if image_file:
+                        try:
+                            if allowed_file(image_file.filename):
+                                from werkzeug.utils import secure_filename
+                                import os
+
+                                filename = secure_filename(image_file.filename)
+                                uploads_dir = os.path.join(app.static_folder, 'uploads')
+
+                                # Ensure uploads directory exists
+                                if not os.path.exists(uploads_dir):
+                                    os.makedirs(uploads_dir)
+
+                                image_path = os.path.join(uploads_dir, filename)
+                                image_file.save(image_path)
+                                app.logger.info(f"Successfully saved new admin image: {filename}")
+                            else:
+                                app.logger.warning(f"Invalid file type for new admin: {image_file.filename}")
+                                # Continue with default image
+                                filename = 'admin_default.jpg'
+                        except Exception as e:
+                            app.logger.error(f"Error saving new admin image: {str(e)}")
+                            # Continue with default image if upload fails
+                            filename = 'admin_default.jpg'
+
+                    new_admin = User(
+                        username=username,
+                        email=email,
+                        first_name=first_name,
+                        last_name=last_name,
+                        phone=phone,
+                        password=generate_password_hash(password),
+                        role='admin',
+                        location_id=location_id,
+                        image=filename
+                    )
+                    db.session.add(new_admin)
+                    db.session.commit()
+                    return jsonify({'success': True, 'message': 'Admin registered successfully!'})
+
+            except Exception as e:
+                db.session.rollback()
+                app.logger.error(f"Database error in admin management: {str(e)}")
+                return jsonify({'success': False, 'message': f'Database error: {str(e)}'})
 
         except Exception as e:
             app.logger.error(f"Error processing admin request: {str(e)}")
-            flash(f"An error occurred while updating admin settings: {str(e)}", 'danger')
+            return jsonify({'success': False, 'message': f'An error occurred: {str(e)}'})
 
-    # Get the admin user for the form
-    admin = User.query.filter_by(role='admin').first()
-    return render_template('admin_new/ae_user.html', admin=admin)
+    # For GET requests, return admin data directly
+    try:
+        admin_username = session.get('admin')
+        admin = User.query.filter_by(username=admin_username, role='admin').first()
 
+        if not admin:
+            return jsonify({'success': False, 'message': 'Admin not found!'})
+
+        locations = Location.query.all()
+
+        return render_template('admin_new/ae_user.html',
+                             admin=admin,
+                             locations=[loc.to_dict() for loc in locations])
+    except Exception as e:
+        app.logger.error(f"Error loading admin data: {str(e)}")
+        flash(f"Error loading admin data: {str(e)}", 'danger')
+        return redirect(url_for('admin_dashboard'))
 
 if __name__ == '__main__':
     app.run(host=app.config['HOST'], port=app.config['PORT'], debug=app.config['DEBUG'], secret_key=app.config['SECRET_KEY'])

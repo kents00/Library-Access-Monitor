@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Verify Code - Library Access Monitor</title>
+    <link rel="shortcut icon" type="image/png"
+        href="{{ url_for('static', filename='assets/images/logos/favicon.png') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='assets/css/styles.min.css') }}" />
+</head>
+
+<body>
+    <!--  Body Wrapper -->
+    <div class="page-wrapper" id="main-wrapper" data-layout="vertical" data-navbarbg="skin6" data-sidebartype="full"
+        data-sidebar-position="fixed" data-header-position="fixed">
+        <div
+            class="position-relative overflow-hidden text-bg-light min-vh-100 d-flex align-items-center justify-content-center">
+            <div class="d-flex align-items-center justify-content-center w-100">
+                <div class="row justify-content-center w-100">
+                    <div class="col-md-8 col-lg-6 col-xxl-3">
+                        <div class="card mb-0">
+                            <div class="card-body">
+                                <a href="{{ url_for('admin.admin_login') }}"
+                                    class="text-nowrap logo-img text-center d-block py-3 w-100">
+                                    <img src="{{ url_for('static', filename='assets/images/logos/logo.svg') }}" alt="">
+                                </a>
+                                <h4 class="text-center mb-3">Enter Verification Code</h4>
+                                <p class="text-center text-muted mb-4">We've sent a 6-digit code to {{ email }}</p>
+
+                                <form method="POST" action="{{ url_for('admin.admin_verify_code_post') }}">
+                                    <input type="hidden" name="email" value="{{ email }}">
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Verification Code</label>
+                                        <div class="d-flex gap-2 justify-content-center">
+                                            <input type="text" class="form-control text-center code-input" maxlength="1"
+                                                name="code1" required>
+                                            <input type="text" class="form-control text-center code-input" maxlength="1"
+                                                name="code2" required>
+                                            <input type="text" class="form-control text-center code-input" maxlength="1"
+                                                name="code3" required>
+                                            <input type="text" class="form-control text-center code-input" maxlength="1"
+                                                name="code4" required>
+                                            <input type="text" class="form-control text-center code-input" maxlength="1"
+                                                name="code5" required>
+                                            <input type="text" class="form-control text-center code-input" maxlength="1"
+                                                name="code6" required>
+                                        </div>
+                                    </div>
+
+                                    <button type="submit" class="btn btn-primary w-100 py-8 fs-4 mb-3">Verify
+                                        Code</button>
+                                </form>
+
+                                <div class="text-center">
+                                    <button type="button" class="btn btn-link" onclick="resendCode()">Resend
+                                        Code</button>
+                                    <br>
+                                    <a href="{{ url_for('admin.admin_forgot_password') }}"
+                                        class="text-primary fw-bold">Back</a>
+                                </div>
+
+                                {% with messages = get_flashed_messages() %}
+                                {% if messages %}
+                                <div class="alert alert-warning mt-3">
+                                    {{ messages[0] }}
+                                </div>
+                                {% endif %}
+                                {% endwith %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='assets/libs/jquery/dist/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='assets/libs/bootstrap/dist/js/bootstrap.bundle.min.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/notiflix@3.2.6/dist/notiflix-aio-3.2.6.min.js"></script>
+
+    <script>
+        // Configure Notiflix
+        Notiflix.Notify.init({
+            position: 'right-top',
+            timeout: 5000,
+            distance: '10px',
+            opacity: 1,
+            borderRadius: '5px',
+            width: '280px',
+            closeButton: true,
+            clickToClose: true
+        });
+
+        Notiflix.Loading.init({
+            svgColor: '#0D6EFD',
+            messageFontSize: '1rem',
+            backgroundColor: 'rgba(0,0,0,0.8)'
+        });
+
+        // Auto-focus and move between code inputs
+        document.addEventListener('DOMContentLoaded', function () {
+            const codeInputs = document.querySelectorAll('.code-input');
+
+            codeInputs.forEach((input, index) => {
+                input.addEventListener('input', function () {
+                    if (this.value.length === 1 && index < codeInputs.length - 1) {
+                        codeInputs[index + 1].focus();
+                    }
+                });
+
+                input.addEventListener('keydown', function (e) {
+                    if (e.key === 'Backspace' && this.value === '' && index > 0) {
+                        codeInputs[index - 1].focus();
+                    }
+                });
+            });
+
+            // Focus first input
+            if (codeInputs.length > 0) {
+                codeInputs[0].focus();
+            }
+
+            // Process flash messages
+            const flashContainer = document.getElementById('flash-data');
+            if (flashContainer) {
+                const messages = flashContainer.querySelectorAll('.flash-message');
+                messages.forEach(function (messageEl) {
+                    const category = messageEl.getAttribute('data-category') || 'info';
+                    const message = messageEl.textContent.trim();
+                    if (message) {
+                        showNotification(category, message);
+                    }
+                });
+            }
+
+            // Process Bootstrap alerts
+            const alertElements = document.querySelectorAll('.alert');
+            alertElements.forEach(function (alert) {
+                let category = 'info';
+                if (alert.classList.contains('alert-warning')) category = 'warning';
+                if (alert.classList.contains('alert-danger')) category = 'failure';
+                if (alert.classList.contains('alert-success')) category = 'success';
+
+                const message = alert.textContent.trim();
+                if (message) {
+                    showNotification(category, message);
+                }
+                alert.style.display = 'none';
+            });
+        });
+
+        function showNotification(category, message) {
+            switch (category) {
+                case 'success':
+                    Notiflix.Notify.success(message);
+                    break;
+                case 'error':
+                case 'danger':
+                case 'failure':
+                    Notiflix.Notify.failure(message);
+                    break;
+                case 'warning':
+                    Notiflix.Notify.warning(message);
+                    break;
+                default:
+                    Notiflix.Notify.info(message);
+            }
+        }
+
+        function resendCode() {
+            Notiflix.Loading.pulse('Resending verification code...');
+
+            fetch('{{ url_for("admin.admin_resend_code") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: '{{ email }}'
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    Notiflix.Loading.remove();
+                    if (data.success) {
+                        showNotification('success', 'Verification code resent successfully!');
+                    } else {
+                        showNotification('failure', 'Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    Notiflix.Loading.remove();
+                    showNotification('failure', 'Error resending code. Please try again.');
+                });
+        }
+    </script>
+
+    <!-- Hidden container for flash messages -->
+    <div id="flash-data" style="display:none;">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+        <div class="flash-message" data-category="{{ category }}">{{ message }}</div>
+        {% endfor %}
+        {% endwith %}
+    </div>
+
+    <style>
+        .code-input {
+            width: 50px;
+            height: 50px;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+    </style>
+</body>
+
+</html>

@@ -9,6 +9,7 @@ class Location(db.Model):
 
     # Changed from backref to back_populates to match Student model
     students = db.relationship('Student', back_populates='location')
+    user = db.relationship('User', back_populates='location')
 
     def to_dict(self):
         return{

@@ -1,6 +1,9 @@
 import os
+from dotenv import load_dotenv
 
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+load_dotenv()
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 class Config:
     DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
@@ -11,3 +14,11 @@ class Config:
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
     PORT = int(os.environ.get('PORT', 1000))
     HOST = os.environ.get('HOST', '0.0.0.0')
+
+    # Email configuration
+    MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
+    MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
+    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', True)
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+    MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER')
