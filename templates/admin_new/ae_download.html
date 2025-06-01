@@ -1,5 +1,8 @@
 {% extends "admin_new/ae_base.html" %}
 {% block admin_home %}
+<!-- Include the standardized flash message system -->
+{% include '_flash_messages.html' %}
+
 <!--  Header End -->
 <div class="card">
   <div class="card-body">
@@ -39,9 +42,117 @@
         <label for="end_time" class="form-label">End Time:</label>
         <input type="time" class="form-control" id="end_time" name="end_time">
       </div>
-      <button type="submit" name="export_csv" class="btn btn-primary m-1">Export as CSV</button>
-      <button type="submit" name="export_pdf" class="btn btn-secondary m-1">Export as PDF</button>
+      <button type="submit" name="export_csv" class="btn btn-primary m-1">
+        <i class="fas fa-file-csv me-1"></i>Export as CSV
+      </button>
+      <button type="submit" name="export_pdf" class="btn btn-secondary m-1">
+        <i class="fas fa-file-pdf me-1"></i>Export as PDF
+      </button>
     </form>
   </div>
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const form = document.querySelector('form');
+    const filterSelect = document.getElementById('filter');
+    const startDateInput = document.getElementById('start_date');
+    const endDateInput = document.getElementById('end_date');
+
+    // Set default dates based on filter
+    function setDefaultDates() {
+      const filter = filterSelect.value;
+      const now = new Date();
+      let startDate, endDate;
+
+      switch (filter) {
+        case 'weekly':
+          startDate = new Date(now.setDate(now.getDate() - 7));
+          endDate = new Date();
+          break;
+        case 'monthly':
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+          break;
+        case 'yearly':
+          startDate = new Date(now.getFullYear(), 0, 1);
+          endDate = new Date(now.getFullYear(), 11, 31);
+          break;
+        default:
+          return; // Custom - let user set dates
+      }
+
+      startDateInput.value = startDate.toISOString().split('T')[0];
+      endDateInput.value = endDate.toISOString().split('T')[0];
+    }
+
+    // Set initial dates
+    setDefaultDates();
+
+    // Update dates when filter changes
+    filterSelect.addEventListener('change', setDefaultDates);
+
+    // Handle form submission
+    form.addEventListener('submit', function (e) {
+      const submitButton = e.submitter;
+      if (!submitButton || (!submitButton.name.includes('export'))) return;
+
+      const startDate = startDateInput.value;
+      const endDate = endDateInput.value;
+      const exportType = submitButton.name === 'export_csv' ? 'CSV' : 'PDF';
+
+      // Validate dates
+      if (!startDate || !endDate) {
+        e.preventDefault();
+        window.FlashMessages.showNotification('warning', 'Please select both start and end dates.');
+        return false;
+      }
+
+      if (new Date(startDate) > new Date(endDate)) {
+        e.preventDefault();
+        window.FlashMessages.showNotification('warning', 'Start date cannot be later than end date.');
+        return false;
+      }
+
+      // Show loading
+      setTimeout(() => {
+        window.FlashMessages.showLoading(`Exporting ${exportType}... Please wait.`);
+      }, 100);
+
+      // Hide loading after file download (since it's a file download, page doesn't reload)
+      setTimeout(() => {
+        window.FlashMessages.hideLoading();
+        window.FlashMessages.showNotification('success', `${exportType} export completed successfully!`);
+      }, 3000); // Adjust timing as needed
+    });
+
+    // Alternative: Detect when download starts
+    let originalOpen = window.open;
+    window.open = function () {
+      setTimeout(() => {
+        window.FlashMessages.hideLoading();
+        window.FlashMessages.showNotification('success', 'Export completed successfully!');
+      }, 2000);
+      return originalOpen.apply(this, arguments);
+    };
+
+    // Detect focus return (when download dialog closes)
+    let downloadInProgress = false;
+    window.addEventListener('focus', function () {
+      if (downloadInProgress) {
+        setTimeout(() => {
+          window.FlashMessages.hideLoading();
+          window.FlashMessages.showNotification('success', 'Export completed successfully!');
+          downloadInProgress = false;
+        }, 500);
+      }
+    });
+
+    window.addEventListener('blur', function () {
+      if (document.querySelector('.notiflix-loading')) {
+        downloadInProgress = true;
+      }
+    });
+  });
+</script>
 {% endblock %}

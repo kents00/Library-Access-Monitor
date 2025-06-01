@@ -42,13 +42,6 @@
                   </div>
                   <button type="submit" class="btn btn-primary w-100 py-8 fs-4 mb-4">Login</button>
                 </form>
-                {% with messages = get_flashed_messages() %}
-                {% if messages %}
-                <div class="alert alert-warning d-flex justify-content-center thq-section-max-width">
-                  {{ messages[0] }}
-                </div>
-                {% endif %}
-                {% endwith %}
               </div>
             </div>
           </div>
@@ -56,113 +49,14 @@
       </div>
     </div>
   </div>
+
+  <!-- Include the standardized flash message system -->
+  {% include '_flash_messages.html' %}
+
   <script src="{{ url_for('static', filename='assets/libs/jquery/dist/jquery.min.js') }}"></script>
   <script src="{{ url_for('static', filename='assets/libs/bootstrap/dist/js/bootstrap.bundle.min.js') }}"></script>
   <!-- solar icons -->
   <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js"></script>
-  <!-- Notiflix library -->
-  <script src="https://cdn.jsdelivr.net/npm/notiflix@3.2.6/dist/notiflix-aio-3.2.6.min.js"></script>
-
-  <script>
-    /**
-     * Standard Flash Message System
-     * Consistent approach for handling notifications across the application
-     */
-
-    // Configure Notiflix with standard settings
-    Notiflix.Notify.init({
-      position: 'right-top',
-      timeout: 5000,
-      distance: '10px',
-      opacity: 1,
-      borderRadius: '5px',
-      width: '280px',
-      closeButton: true,
-      clickToClose: true
-    });
-
-    // Loading spinner configuration
-    Notiflix.Loading.init({
-      svgColor: '#0D6EFD',
-      messageFontSize: '1rem',
-      backgroundColor: 'rgba(0,0,0,0.8)'
-    });
-
-    // Process flash messages on page load
-    document.addEventListener('DOMContentLoaded', function () {
-      // Process backend error message
-      const error = "{{ error|default('') }}";
-      if (error && error !== "None" && error !== "") {
-        showNotification('failure', error);
-      }
-
-      // Process Bootstrap alerts and convert to Notiflix
-      const alertElements = document.querySelectorAll('.alert');
-      alertElements.forEach(function (alert) {
-        let category = 'info';
-        if (alert.classList.contains('alert-warning')) category = 'warning';
-        if (alert.classList.contains('alert-danger')) category = 'failure';
-        if (alert.classList.contains('alert-success')) category = 'success';
-
-        const message = alert.textContent.trim();
-        if (message) {
-          showNotification(category, message);
-          alert.style.display = 'none'; // Hide original alert
-        }
-      });
-
-      // Process flash messages from hidden container
-      const flashContainer = document.getElementById('flash-data');
-      if (flashContainer) {
-        const messages = flashContainer.querySelectorAll('.flash-message');
-        messages.forEach(function (messageEl) {
-          const category = messageEl.getAttribute('data-category') || 'info';
-          const message = messageEl.textContent;
-          showNotification(category, message);
-        });
-      }
-
-      // Remove the form submit event listener that was adding loading indicator
-      // Let the form submit naturally for redirect functionality
-    });
-
-    /**
-     * Show a notification using Notiflix
-     */
-    function showNotification(category, message) {
-      switch (category) {
-        case 'success':
-          Notiflix.Notify.success(message);
-          break;
-        case 'error':
-        case 'danger':
-        case 'failure':
-          Notiflix.Notify.failure(message);
-          break;
-        case 'warning':
-          Notiflix.Notify.warning(message);
-          break;
-        default:
-          Notiflix.Notify.info(message);
-      }
-    }
-
-    /**
-     * Show a loading indicator
-     */
-    function showLoading(message = 'Loading...') {
-      Notiflix.Loading.pulse(message);
-    }
-  </script>
-
-  <!-- Hidden container for flash messages -->
-  <div id="flash-data" style="display:none;">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% for category, message in messages %}
-    <div class="flash-message" data-category="{{ category }}">{{ message }}</div>
-    {% endfor %}
-    {% endwith %}
-  </div>
 </body>
 
 </html>

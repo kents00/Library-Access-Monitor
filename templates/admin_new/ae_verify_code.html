@@ -66,6 +66,9 @@
         </div>
     </div>
 
+    <!-- Include the standardized flash message system -->
+    {% include '_flash_messages.html' %}
+
     <script src="{{ url_for('static', filename='assets/libs/jquery/dist/jquery.min.js') }}"></script>
     <script src="{{ url_for('static', filename='assets/libs/bootstrap/dist/js/bootstrap.bundle.min.js') }}"></script>
 
@@ -92,6 +95,8 @@
 
         // Resend code functionality
         document.getElementById('resendBtn').addEventListener('click', function () {
+            showLoading('Resending code...');
+
             fetch('/api/admin/resend-code', {
                 method: 'POST',
                 headers: {
@@ -103,15 +108,17 @@
             })
                 .then(response => response.json())
                 .then(data => {
+                    hideLoading();
                     if (data.success) {
-                        alert('Verification code resent successfully');
+                        showNotification('success', 'Verification code resent successfully');
                     } else {
-                        alert(data.message);
+                        showNotification('failure', data.message);
                     }
                 })
                 .catch(error => {
+                    hideLoading();
                     console.error('Error:', error);
-                    alert('An error occurred while resending the code');
+                    showNotification('failure', 'An error occurred while resending the code');
                 });
         });
     </script>

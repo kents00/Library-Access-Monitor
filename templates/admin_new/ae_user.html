@@ -3,6 +3,9 @@
 <!--  Header End -->
 <!-- Content Start -->
 <div class="container-fluid">
+  <!-- Include the standardized flash message system -->
+  {% include '_flash_messages.html' %}
+
   <div class="row">
     <div class="col-12">
       <div class="card shadow-sm">
@@ -13,7 +16,7 @@
           </h4>
         </div>
         <div class="card-body p-4">
-          <form method="POST" enctype="multipart/form-data" id="adminForm">
+          <form method="POST" enctype="multipart/form-data" id="adminForm" data-no-loading="true">
             <input type="hidden" id="adminId" name="adminId" value="{{ admin.id if admin else '' }}">
 
             <!-- Profile Image Section -->
@@ -21,7 +24,7 @@
               <div class="col-12">
                 <div class="text-center">
                   <h5 class="mb-3">Profile Picture</h5>
-                  {% set profile_image = admin.image if admin and admin.image else 'admin_default.jpg' %}
+                  {% set profile_image = admin.image if admin and admin.image else 'default_image.jpg' %}
                   <div class="position-relative d-inline-block">
                     <img id="profileImagePreview" src="{{ url_for('static', filename='uploads/' ~ profile_image) }}"
                       alt="Profile Image" class="rounded-circle border border-3 border-light shadow-lg"

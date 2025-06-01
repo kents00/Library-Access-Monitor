@@ -8,3 +8,4 @@ matplotlib
 Flask-Migrate
 gunicorn
 uwsgi
+reportlab

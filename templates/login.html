@@ -1,4 +1,4 @@
-{% include "base.html" %}
+{% extends "base.html" %}
 {% block home %}
 <div class="min-h-screen flex flex-col items-center justify-center p-4 relative">
   <!-- Background image with overlay -->
@@ -10,12 +10,11 @@
 
   <!-- Content container -->
   <div class="max-w-4xl w-full bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row z-10 relative">
-    <!-- Left panel - USTP Branding -->
+    <!-- Left panel - Welcome section -->
     <div
       class="bg-gradient-to-br from-blue-800 to-indigo-900 p-8 flex flex-col items-center md:items-start justify-center md:w-1/2 text-white">
       <div class="flex flex-col md:flex-row items-center mb-8">
         <div class="relative p-3 rounded-full mb-4 md:mb-0 md:mr-6">
-
           <img alt="USTP Logo" src="{{ url_for('static', filename='images/ustp-logo.png') }}"
             class="w-28 h-28 md:w-36 md:h-36 object-contain animate__animated animate__fadeIn relative z-10 logo-highlight" />
           <div class="absolute inset-0 rounded-full animate__animated animate__pulse animate__infinite z-0">
@@ -53,7 +52,7 @@
 
       <h2 class="text-2xl font-bold text-gray-700 mb-6">Sign In</h2>
 
-      <form method="POST" action="/" id="loginForm" class="space-y-6">
+      <form method="POST" action="/" id="loginForm" class="space-y-6" data-no-loading="true">
         <div class="relative">
           <label for="id" class="text-sm font-medium text-gray-600 mb-1 block">Student ID</label>
           <div class="relative">
@@ -72,15 +71,8 @@
         </button>
       </form>
 
-      {% with messages = get_flashed_messages() %}
-      {% if messages %}
-      <div
-        class="mt-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded animate__animated animate__fadeIn"
-        role="alert">
-        <p>{{ messages[0] }}</p>
-      </div>
-      {% endif %}
-      {% endwith %}
+      <!-- Flash messages will be handled by the standardized system -->
+      {% include '_flash_messages.html' %}
     </div>
   </div>
 
@@ -290,9 +282,14 @@
 </div>
 
 <script>
-  // Add loading state to submit button
-  document.getElementById('loginForm').addEventListener('submit', function () {
+  // Enhanced form submission with duplicate login handling
+  document.getElementById('loginForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+
     const button = document.getElementById('submitBtn');
+    const originalContent = button.innerHTML;
+
+    // Show loading state
     button.disabled = true;
     button.innerHTML = `
       <svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -301,6 +298,61 @@
       </svg>
       Processing...
     `;
+
+    // Submit form via AJAX to get detailed response
+    const formData = new FormData(this);
+
+    fetch('/', {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+      .then(response => response.json())
+      .then(data => {
+        // Reset button
+        button.disabled = false;
+        button.innerHTML = originalContent;
+
+        if (data.success && data.student) {
+          // Successful login - show student modal
+          document.getElementById('studentExists').value = 'true';
+          // Update the page with student data and show modal
+          window.location.reload();
+        } else {
+          // Login failed - show error message
+          if (data.message) {
+            // Determine message type based on content
+            const messageType = data.message.includes('already logged in') ? 'warning' : 'error';
+            if (typeof showNotification === 'function') {
+              showNotification(messageType, data.message);
+            } else {
+              alert(data.message);
+            }
+          }
+
+          // Clear the input field for retry
+          document.getElementById('id').value = '';
+          document.getElementById('id').focus();
+        }
+      })
+      .catch(error => {
+        // Reset button
+        button.disabled = false;
+        button.innerHTML = originalContent;
+
+        console.error('Login error:', error);
+        if (typeof showNotification === 'function') {
+          showNotification('error', 'An error occurred during login. Please try again.');
+        } else {
+          alert('An error occurred during login. Please try again.');
+        }
+
+        // Clear the input field
+        document.getElementById('id').value = '';
+        document.getElementById('id').focus();
+      });
   });
 
   // Student modal popup functionality - template-tag-free version

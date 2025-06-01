@@ -213,7 +213,7 @@ def admin_login():
             flash('Login successful!', 'success')
             return redirect(url_for('admin_dashboard'))
         else:
-            # Pass error to template to be displayed with Notiflix
+            # Use consistent error category
             flash('Invalid username or password.', 'error')
             return render_template('admin_new/ae_login.html')
 

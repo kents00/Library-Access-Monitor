@@ -138,16 +138,35 @@ def admin_dashboard():
                             for place, visits in place_visits_raw]
 
             # Get recent logins (students who logged in within the last 24 hours)
+            # Modified to show only one login per student per day
             recent_time = today - timedelta(hours=24)
 
-            recent_logins = (
-                db.session.query(Attendance, Student)
-                .join(Student, Student.id == Attendance.student_id)
-                .filter(Attendance.check_in_time >= recent_time)
-                .order_by(Attendance.check_in_time.desc())
-                .limit(10)
-                .all()
-            )
+            # Get the most recent login per student per day using subquery approach
+            subquery = db.session.query(
+                Attendance.student_id,
+                db.func.date(Attendance.check_in_time).label('login_date'),
+                db.func.max(Attendance.check_in_time).label('latest_login')
+            ).filter(
+                Attendance.check_in_time >= recent_time
+            ).group_by(
+                Attendance.student_id,
+                db.func.date(Attendance.check_in_time)
+            ).subquery()
+
+            recent_logins = db.session.query(
+                Attendance,
+                Student
+            ).join(
+                Student, Student.id == Attendance.student_id
+            ).join(
+                subquery,
+                db.and_(
+                    Attendance.student_id == subquery.c.student_id,
+                    Attendance.check_in_time == subquery.c.latest_login
+                )
+            ).order_by(
+                db.desc(Attendance.check_in_time)
+            ).limit(10).all()
 
             logged_in_users = []
             for attendance, student in recent_logins:
@@ -156,21 +175,45 @@ def admin_dashboard():
                     'login_time': attendance.check_in_time.isoformat()
                 })
 
-            # Calculate statistics
-            total_visitors = db.session.query(db.func.count(Attendance.id)).filter(
+            # Calculate statistics based on unique daily logins
+            total_visitors = db.session.query(
+                db.func.count(db.distinct(
+                    db.func.concat(
+                        db.func.date(Attendance.check_in_time),
+                        '_',
+                        Attendance.student_id
+                    )
+                ))
+            ).filter(
                 Attendance.check_in_time >= start_date,
                 Attendance.check_in_time <= end_date
             ).scalar() or 0
 
-            # Calculate monthly logins
+            # Calculate monthly logins (unique daily logins)
             month_start = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-            total_logins_month = db.session.query(db.func.count(Attendance.id)).filter(
+            total_logins_month = db.session.query(
+                db.func.count(db.distinct(
+                    db.func.concat(
+                        db.func.date(Attendance.check_in_time),
+                        '_',
+                        Attendance.student_id
+                    )
+                ))
+            ).filter(
                 Attendance.check_in_time >= month_start
             ).scalar() or 0
 
             # Calculate percentage increase (simplified)
             prev_month_start = (month_start - timedelta(days=1)).replace(day=1)
-            prev_month_logins = db.session.query(db.func.count(Attendance.id)).filter(
+            prev_month_logins = db.session.query(
+                db.func.count(db.distinct(
+                    db.func.concat(
+                        db.func.date(Attendance.check_in_time),
+                        '_',
+                        Attendance.student_id
+                    )
+                ))
+            ).filter(
                 Attendance.check_in_time >= prev_month_start,
                 Attendance.check_in_time < month_start
             ).scalar() or 1
@@ -181,7 +224,7 @@ def admin_dashboard():
 
             # Set icon classes based on increase/decrease
             if login_percentage_increase >= 0:
-                login_icon_class = 'ti-arrow-up-left text-success'
+                login_icon_class = 'ti-arrow-up-right text-success'
                 login_bg_class = 'bg-light-success'
             else:
                 login_icon_class = 'ti-arrow-down-right text-danger'

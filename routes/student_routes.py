@@ -19,22 +19,40 @@ def login():
             student = Student.query.filter_by(id=student_id).first()
 
             if student:
-                # Create attendance record without modifying is_logged_in
-                new_attendance = Attendance(
-                    student_id=student.id,
-                    check_in_time=datetime.datetime.now()
-                )
-                db.session.add(new_attendance)
-                db.session.commit()
+                # Check if student has already logged in today
+                today_start = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+                today_end = today_start + datetime.timedelta(days=1)
 
-                student_data = student.to_dict()
-                if hasattr(student, 'course') and student.course and 'course' not in student_data:
-                    student_data['course'] = {
-                        'id': student.course.id,
-                        'course_name': student.course.course_name
-                    }
+                existing_attendance = Attendance.query.filter(
+                    Attendance.student_id == student.id,
+                    Attendance.check_in_time >= today_start,
+                    Attendance.check_in_time < today_end
+                ).first()
 
-                current_app.logger.info(f"Student {student_id} logged in successfully")
+                if existing_attendance:
+                    # Student already logged in today
+                    success = False
+                    login_time = existing_attendance.check_in_time.strftime('%I:%M %p')
+                    message = f'You have already logged in today at {login_time}. Only one login per day is allowed.'
+                    student_data = None
+                    current_app.logger.info(f"Student {student_id} attempted duplicate login - already logged in at {login_time}")
+                else:
+                    # Create new attendance record for today
+                    new_attendance = Attendance(
+                        student_id=student.id,
+                        check_in_time=datetime.datetime.now()
+                    )
+                    db.session.add(new_attendance)
+                    db.session.commit()
+
+                    student_data = student.to_dict()
+                    if hasattr(student, 'course') and student.course and 'course' not in student_data:
+                        student_data['course'] = {
+                            'id': student.course.id,
+                            'course_name': student.course.course_name
+                        }
+
+                    current_app.logger.info(f"Student {student_id} logged in successfully for the first time today")
             else:
                 success = False
                 message = 'No student ID number found. Please try again.'
